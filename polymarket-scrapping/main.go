@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/joho/godotenv"
+	supabase "github.com/supabase-community/supabase-go"
 	"google.golang.org/genai"
 )
 
@@ -41,6 +42,29 @@ type Market struct {
 	Image         string    `json:"image"`
 }
 
+type MarketInsert struct {
+	Question    string  `json:"question"`
+	Description string  `json:"description"`
+	Volume      float64 `json:"volume"`
+	YesPrice    float64 `json:"yes_price"`
+}
+
+var baseImagePrompt string
+var basePromptOnce sync.Once
+
+func getBaseImagePrompt() (string, error) {
+	var err error
+	basePromptOnce.Do(func() {
+		data, readErr := os.ReadFile("/Users/benliu/dev/hackharvard/polymarket-scrapping/marketImagePrompt.txt")
+		if readErr != nil {
+			err = readErr
+			return
+		}
+		baseImagePrompt = string(data)
+	})
+	return baseImagePrompt, err
+}
+
 func parseJSONEncodedStringSlice(s string) ([]string, error) {
 	var arr []string
 	if err := json.Unmarshal([]byte(s), &arr); err != nil {
@@ -61,38 +85,33 @@ func parsePriceStringsToFloats(priceStrings []string) ([]float64, error) {
 	return prices, nil
 }
 
-var baseImagePrompt string
-var basePromptOnce sync.Once
-
-func getBaseImagePrompt() (string, error) {
-	var err error
-	basePromptOnce.Do(func() {
-		data, readErr := os.ReadFile("/Users/benliu/dev/hackharvard/polymarket-scrapping/marketImagePrompt.txt")
-		if readErr != nil {
-			err = readErr
-			return
-		}
-		baseImagePrompt = string(data)
-	})
-	return baseImagePrompt, err
-}
-
 func buildMarketImagePrompt(template string, market Market) string {
+
 	prompt := strings.ReplaceAll(template, "{{MARKET_QUESTION}}", market.Question)
 	prompt = strings.ReplaceAll(prompt, "{{MARKET_DESCRIPTION}}", market.Description)
 	return prompt
 }
 
 func generateMarketImage(client *genai.Client, market Market) (string, error) {
-	_, _ = client, market
-	// Build the prompt by pulling the template once and injecting market fields
-	template, err := getBaseImagePrompt()
+
+	prompt := buildMarketImagePrompt(baseImagePrompt, market)
+	res, err := client.Models.GenerateContent(context.Background(), "gemini-2.5-flash-image", []*genai.Content{
+		{
+			Parts: []*genai.Part{
+				{Text: prompt},
+			},
+			Role: "user",
+		}, {
+			Parts: []*genai.Part{
+				{Text: "You are a helpful assistant that generates images for prediction markets."},
+			},
+			Role: "user",
+		},
+	}, &genai.GenerateContentConfig{})
 	if err != nil {
 		return "", err
 	}
-	prompt := buildMarketImagePrompt(template, market)
-	// For now, return the built prompt. Hook up model generation separately.
-	return prompt, nil
+	return res.Text(), nil
 }
 func grabMarkets(client *genai.Client) ([]Market, error) {
 	baseURL := "https://gamma-api.polymarket.com/markets"
@@ -150,6 +169,12 @@ func grabMarkets(client *genai.Client) ([]Market, error) {
 			OutcomePrices: prices,
 		}
 		fmt.Println(market.Question + "\n")
+		/*
+			image, err := generateMarketImage(client, market)
+			if err != nil {
+				fmt.Println(err)
+			}
+			market.Image = image */
 		markets = append(markets, market)
 	}
 	return markets, nil
@@ -162,6 +187,9 @@ func main() {
 		fmt.Println("GEMINI_API_KEY not set. Create a .env with GEMINI_API_KEY or export it.")
 		return
 	}
+	// load image gen prompt
+	getBaseImagePrompt()
+
 	fmt.Println("API Key loaded successfully")
 	fmt.Println(apiKey)
 	client, err := genai.NewClient(context.Background(), &genai.ClientConfig{
@@ -171,10 +199,27 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
+	supabaseClient, err := supabase.NewClient(os.Getenv("SUPABASE_URL"), os.Getenv("SUPABASE_API_KEY"), &supabase.ClientOptions{})
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	markets, err := grabMarkets(client)
 	if err != nil {
 		fmt.Println(err)
+	}
+	testMarket := markets[0]
+	fmt.Println(testMarket.Volume)
+	marketInsert := MarketInsert{
+		Question:    testMarket.Question,
+		Description: testMarket.Description,
+		Volume:      func() float64 { v, _ := strconv.ParseFloat(testMarket.Volume, 64); return v }(),
+		YesPrice:    testMarket.OutcomePrices[0],
+	}
+	_, _, err = supabaseClient.From("questions").Insert(marketInsert, false, "", "", "").Execute()
+
+	if err != nil {
+		fmt.Println("Failed to insert market", err)
 	}
 	fmt.Println(len(markets))
 }
