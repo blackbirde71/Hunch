@@ -46,8 +46,17 @@ jobs:
             echo "BASE_HREF=/${REPO_NAME}/" >> $GITHUB_ENV
           fi
 
+      - name: Detect supported build flags
+        run: |
+          if flutter build web -h | grep -q -- "--web-renderer"; then
+            echo "WEB_RENDERER_FLAG=--web-renderer canvaskit" >> $GITHUB_ENV
+          fi
+          if flutter build web -h | grep -q -- "--base-href"; then
+            echo "BASE_HREF_FLAG=--base-href=$BASE_HREF" >> $GITHUB_ENV
+          fi
+
       - name: Build web
-        run: flutter build web --release --web-renderer canvaskit --base-href "$BASE_HREF"
+        run: flutter build web --release $WEB_RENDERER_FLAG $BASE_HREF_FLAG
 
       - name: Add .nojekyll
         run: touch build/web/.nojekyll
