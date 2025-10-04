@@ -10,6 +10,30 @@ import 'market.dart';
 import 'globals.dart';
 import 'auth.dart';
 
+void onSwipe(SwipeAction action) async {
+  // add to hive what the user just swiped on
+  marketsBox.put(infoCache[0]?['id'], {
+    'question': infoCache[0]?['question'],
+    'description': infoCache[0]?['description'],
+    'swipe': action
+  });
+
+  // remove the first card from the infoCache
+  if (infoCache.isNotEmpty) {
+    infoCache.removeAt(0);
+  }
+
+  // get the index of the next card
+  qIndex = qIndex + 1;
+
+  // get the next item from supabase
+  List<Map<String, dynamic>> questions =
+      await getQuestionsByIds([questionIds[qIndex]]);
+  Map<String, dynamic> nextCard = questions[0];
+
+  // add it to the cache
+  infoCache.add(nextCard);
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +43,7 @@ Future<void> main() async {
   Hive.registerAdapter(SwipeActionAdapter());
 
   await Hive.openBox<Market>('markets');
-  
+
   // db init
   await Supabase.initialize(
     url: 'https://benwvphuubnrzdlhvjzu.supabase.co',
@@ -29,25 +53,25 @@ Future<void> main() async {
 
   questionIds = await getQuestionIds();
 
-  // TODO: need to remove the questionIDs we've already seen
-  infoCache = await getQuestionsByIds(questionIds.sublist(0, cacheSize));
+  // infoCache = await getQuestionsByIds(questionIds.sublist(0, cacheSize));
+  infoCache = await getQuestionsByIds(cacheSize);
 
-  final testMarket = Market(
-    id: "111",
-    question: "HI?!",
-    description: "ajsdfnjksd,nfkshb",
-    price: 0.2,
-    action: SwipeAction.blank
-  );
+  // final testMarket = Market(
+  //   id: "111",
+  //   question: "HI?!",
+  //   description: "ajsdfnjksd,nfkshb",
+  //   price: 0.2,
+  //   action: SwipeAction.blank
+  // );
 
   marketsBox = await Hive.openBox<Market>('markets');
 
   // remember which questions we've seen
-  qIndex = marketsBox.get("qIndex") ?? cacheSize;
+  // qIndex = marketsBox.get("qIndex") ?? cacheSize;
 
-  marketsBox.put(testMarket.id, testMarket);
+  // marketsBox.put(testMarket.id, testMarket);
 
-  print(marketsBox.get(testMarket.id)?.question);
+  // print(marketsBox.get(testMarket.id)?.question);
 
   runApp(const HunchApp());
 }

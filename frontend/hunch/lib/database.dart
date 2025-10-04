@@ -64,6 +64,43 @@ Future<List<Map<String, dynamic>>> getQuestionsByIds(List<int> ids) async {
   }).toList();
 }
 
+Map<String, dynamic> _processQuestion(Map<String, dynamic> question) {
+  if (question['picture_base64'] != null) {
+    question['picture_data'] =
+        base64Decode(question['picture_base64'] as String);
+  }
+  return question;
+}
+
+/// Fetches up to `limit` questions that the user has not seen and are not in `cache`.
+Future<List<Map<String, dynamic>>> getUnansweredQuestions(
+    int limit, List<int> cache) async {
+  if (limit == 0) return [];
+
+  final user = Supabase.instance.client.auth.currentUser;
+  if (user == null) {
+    // If not signed in, just return random questions
+    final questions = await supabase.from('questions').select().limit(limit);
+    return questions.map(_processQuestion).toList();
+  }
+
+  final answered = await supabase
+      .from('user_interactions')
+      .select('question_id')
+      .eq('user_id', user.id);
+
+  final answeredIds = answered.map<int>((r) => r['question_id'] as int).toList()
+    ..addAll(cache);
+
+  var query = supabase.from('questions').select();
+  if (answeredIds.isNotEmpty) {
+    query = query.not('id', 'in', answeredIds);
+  }
+
+  final questions = await query.limit(limit);
+  return questions.map(_processQuestion).toList();
+}
+
 Future<void> sendAnswers(List<Answer> answers) async {
   if (answers.isEmpty) return;
 
