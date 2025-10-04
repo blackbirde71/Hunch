@@ -62,10 +62,12 @@ Future<void> onSwipe(SwipeAction action) async {
     }
 
     print("yipee");
-    final cacheQIDs = getCacheQIDs(infoCache);
-    final nextQs = await getUnansweredQuestions(cacheSize, pastQIDS);
-    infoCache.addAll(nextQs);
+    updateCache(pastQIDS);
   }
+}
+
+void updateCache(List<int> pastQIDS) async {
+  infoCache.addAll(await getUnansweredQuestions(cacheSize, pastQIDS));
 }
 
 List<int> getCacheQIDs(List<Map<String, dynamic>> infoCache) {
