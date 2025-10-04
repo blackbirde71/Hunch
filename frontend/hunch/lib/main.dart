@@ -7,12 +7,31 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'feed.dart';
 import 'hunches.dart';
 import 'market.dart';
+import 'globals.dart';
 
-late List<int> questionIds;
-late List<Map<String, dynamic>> infoCache;
-final cacheSize = 2;
 
 void onSwipe(SwipeAction action) async {
+
+  // add to hive what the user just swiped on
+  marketsBox.put(infoCache[0]?.id, {
+    question: infoCache[0]?.question,
+    description: infoCache[0]?.description,
+    swipe: action
+  });
+
+  // remove the first card from the infoCache
+  if (infoCache.isNoteEmpty) {
+    infoCache.remove(0);
+  }
+
+  // get the index of the next card
+  qIndex = qIndex + 1;
+
+  // get the next item from supabase
+  Map<String, dynamic> nextCard = getQuestionsByIds(questionIDs[qIndex])[0];
+
+  // add it to the cache
+  infoCache.add(nextCard);
 
 }
 
@@ -33,6 +52,8 @@ Future<void> main() async {
   );
 
   questionIds = await getQuestionIds();
+
+  // TODO: need to remove the questionIDs we've already seen
   infoCache = await getQuestionsByIds(questionIds.sublist(0, cacheSize));
 
   final testMarket = Market(
@@ -42,10 +63,15 @@ Future<void> main() async {
     price: 0.2,
     action: SwipeAction.blank
   );
-  var marketsBox = await Hive.openBox<Market>('markets');
+
+  marketsBox = await Hive.openBox<Market>('markets');
+
+  // remember which questions we've seen
+  qIndex = marketsBox.get("qIndex");
+
   marketsBox.put(testMarket.id, testMarket);
 
-  print(marketsBox.get(testMarket.id));
+  print(marketsBox.get(testMarket.id)?.question);
 
   runApp(const HunchApp());
 }
@@ -107,7 +133,7 @@ class _MainScreenState extends State<MainScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'STREAK',
+                              'Hunches Made',
                               style: TextStyle(
                                 fontFamily: 'Courier',
                                 fontSize: 8,
