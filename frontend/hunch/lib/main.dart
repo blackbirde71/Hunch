@@ -26,10 +26,7 @@ Future<void> main() async {
     anonKey: 'sb_publishable_JiGhx5v95JaN977zMHHlRA_A2nn7wnT',
   );
 
-  questionIds = await getQuestionIds();
-
-  // infoCache = await getQuestionsByIds(questionIds.sublist(0, cacheSize));
-  infoCache = await getUnansweredQuestions(cacheSize, []);
+  // TODO:: these need to be moved to after sign in
 
   // final testMarket = Market(
   //   id: "111",
@@ -40,6 +37,13 @@ Future<void> main() async {
   // );
 
   marketsBox = await Hive.openBox<Market>('markets');
+
+  final user = Supabase.instance.client.auth.currentUser;
+  if (user != null) {
+    questionIds = await getQuestionIds();
+
+    infoCache = await getUnansweredQuestions(cacheSize, []);
+  }
 
   // remember which questions we've seen
   // qIndex = marketsBox.get("qIndex") ?? cacheSize;
@@ -97,8 +101,8 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-
-class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateMixin {
+class _MainScreenState extends State<MainScreen>
+    with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   late AnimationController _breathingController;
   late Animation<double> _translateYAnimation;
@@ -222,5 +226,3 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     );
   }
 }
-
-
