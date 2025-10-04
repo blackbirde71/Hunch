@@ -1,8 +1,19 @@
+// main.dart
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'feed.dart';
 import 'hunches.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    url: 'https://benwvphuubnrzdlhvjzu.supabase.co',
+    // dont flame it is anon key
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlbnd2cGh1dWJucnpkbGh2anp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1ODI1NjgsImV4cCI6MjA3NTE1ODU2OH0.jt5SrMqC91RhYNAqP3m1Ut7f9pOrZF8niI892OkUBFI',
+  );
+
   runApp(const HunchApp());
 }
 
