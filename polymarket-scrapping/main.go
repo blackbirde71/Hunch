@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -12,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/joho/godotenv"
 	supabase "github.com/supabase-community/supabase-go"
@@ -50,7 +52,7 @@ type MarketInsert struct {
 	Description string  `json:"description"`
 	Volume      float64 `json:"volume"`
 	YesPrice    float64 `json:"yes_price"`
-	Image       string  `json:"picture_base64"`
+	ImageURL    string  `json:"image_url"`
 }
 
 var baseImagePrompt string
@@ -91,6 +93,47 @@ func loadBaseImagePrompt() error {
 	return err
 }
 
+// uploadImageToSupabase uploads bytes to Supabase Storage and returns a public URL.
+// Requires env vars: SUPABASE_URL, SUPABASE_BUCKET, and either SUPABASE_SERVICE_ROLE_KEY or SUPABASE_API_KEY.
+func uploadImageToSupabase(ctx context.Context, objectPath string, imageBytes []byte) (string, error) {
+	baseURL := os.Getenv("SUPABASE_URL")
+	bucket := os.Getenv("SUPABASE_BUCKET")
+	if bucket == "" {
+		bucket = "images"
+	}
+	key := os.Getenv("SUPABASE_SERVICE_ROLE_KEY")
+	if key == "" {
+		key = os.Getenv("SUPABASE_API_KEY")
+	}
+	if baseURL == "" || key == "" {
+		return "", fmt.Errorf("missing SUPABASE_URL or API key for storage upload")
+	}
+
+	putURL := fmt.Sprintf("%s/storage/v1/object/%s/%s", baseURL, bucket, objectPath)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, putURL, bytes.NewReader(imageBytes))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+key)
+	req.Header.Set("Content-Type", "image/png")
+	req.Header.Set("x-upsert", "true")
+	req.Header.Set("Cache-Control", "public, max-age=31536000, immutable")
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("upload failed (%d): %s", resp.StatusCode, string(body))
+	}
+
+	publicURL := fmt.Sprintf("%s/storage/v1/object/public/%s/%s", baseURL, bucket, objectPath)
+	return publicURL, nil
+}
+
 func parseJSONEncodedStringSlice(s string) ([]string, error) {
 	var arr []string
 	if err := json.Unmarshal([]byte(s), &arr); err != nil {
@@ -111,7 +154,7 @@ func parsePriceStringsToFloats(priceStrings []string) ([]float64, error) {
 	return prices, nil
 }
 
-func questionExists(marketID string) (bool, error) {
+/*	func questionExists(marketID string) (bool, error) {
 	data, _, err := supabaseClient.From("questions").Select("marketid", "", false).Eq("marketid", marketID).Limit(1, "").Execute()
 	if err != nil {
 		return false, err
@@ -121,10 +164,22 @@ func questionExists(marketID string) (bool, error) {
 		return false, err
 	}
 	return len(rows) > 0, nil
-}
+}*/
 
 func getWorkerLimit() int {
 	s := os.Getenv("MARKET_WORKERS")
+	if s == "" {
+		return 5
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil || n < 1 {
+		return 5
+	}
+	return n
+}
+
+func getBatchSize() int {
+	s := os.Getenv("INSERT_BATCH_SIZE")
 	if s == "" {
 		return 5
 	}
@@ -199,7 +254,7 @@ func grabMarkets(client *genai.Client) ([]Market, error) {
 	params := url.Values{}
 	params.Add("closed", "false")
 	params.Add("volume_num_min", "50000")
-	params.Add("limit", "350")
+	params.Add("limit", "2000")
 	u.RawQuery = params.Encode()
 	req, _ := http.NewRequest("GET", u.String(), nil)
 
@@ -229,16 +284,7 @@ func grabMarkets(client *genai.Client) ([]Market, error) {
 		mj := mj
 		eg.Go(func() error {
 			// Skip if question already exists for this market ID
-			exists, err := questionExists(mj.ID)
-			if err != nil {
-				fmt.Println(err)
-				return nil
-			}
-			if exists {
-				return nil
-			}
-
-			if idNum, err := strconv.Atoi(mj.ID); err == nil && idNum <= 521944 {
+			if idNum, err := strconv.Atoi(mj.ID); err == nil && idNum <= 517000 {
 				return nil
 			}
 			outcomes, err := parseJSONEncodedStringSlice(mj.Outcomes)
@@ -267,7 +313,7 @@ func grabMarkets(client *genai.Client) ([]Market, error) {
 			}
 			var (
 				description string
-				image       string
+				imageURL    string
 			)
 			var inner errgroup.Group
 			inner.Go(func() error {
@@ -283,7 +329,15 @@ func grabMarkets(client *genai.Client) ([]Market, error) {
 				if err != nil {
 					return fmt.Errorf("error generating market image: %w", err)
 				}
-				image = i
+				// Best-effort upload to Supabase Storage; keep base64 for current app compatibility
+				if imgBytes, decErr := base64.StdEncoding.DecodeString(i); decErr == nil {
+					objectPath := fmt.Sprintf("%s.png", market.ID)
+					if imageURL, err = uploadImageToSupabase(context.Background(), objectPath, imgBytes); err != nil {
+						fmt.Println(err)
+					}
+				} else {
+					fmt.Println(decErr)
+				}
 				return nil
 			})
 			if err := inner.Wait(); err != nil {
@@ -296,12 +350,10 @@ func grabMarkets(client *genai.Client) ([]Market, error) {
 				Description: description,
 				Volume:      func() float64 { v, _ := strconv.ParseFloat(market.Volume, 64); return v }(),
 				YesPrice:    market.OutcomePrices[0],
-				Image:       image,
+				ImageURL:    imageURL,
 			}
-			_, _, err = supabaseClient.From("questions").Insert(marketInsert, false, "", "", "").Execute()
-			if err != nil {
+			if _, _, err := supabaseClient.From("questions").Insert(marketInsert, false, "", "", "").Execute(); err != nil {
 				fmt.Println(err)
-				return nil
 			}
 			mu.Lock()
 			markets = append(markets, market)
