@@ -10,6 +10,30 @@ import 'market.dart';
 import 'globals.dart';
 import 'auth.dart';
 
+void onSwipe(SwipeAction action) async {
+  // add to hive what the user just swiped on
+  marketsBox.put(infoCache[0]?['id'], {
+    'question': infoCache[0]?['question'],
+    'description': infoCache[0]?['description'],
+    'swipe': action
+  });
+
+  // remove the first card from the infoCache
+  if (infoCache.isNotEmpty) {
+    infoCache.removeAt(0);
+  }
+
+  // get the index of the next card
+  qIndex = qIndex + 1;
+
+  // get the next item from supabase
+  List<Map<String, dynamic>> questions =
+      await getQuestionsByIds([questionIds[qIndex]]);
+  Map<String, dynamic> nextCard = questions[0];
+
+  // add it to the cache
+  infoCache.add(nextCard);
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +43,7 @@ Future<void> main() async {
   Hive.registerAdapter(SwipeActionAdapter());
 
   await Hive.openBox<Market>('markets');
-  
+
   // db init
   await Supabase.initialize(
     url: 'https://benwvphuubnrzdlhvjzu.supabase.co',
@@ -107,6 +131,131 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       body: Column(
         children: [
+          Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: Colors.black, width: 3)),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Streak
+                    Expanded(
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          border: Border(
+                              right: BorderSide(color: Colors.black, width: 3)),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Hunches Made',
+                              style: TextStyle(
+                                fontFamily: 'Courier',
+                                fontSize: 8,
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: 1.5,
+                                color: Colors.black.withOpacity(0.4),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              '23',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w700,
+                                height: 1,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Brand
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      color: Colors.black,
+                      child: const Center(
+                        child: Text(
+                          'Hunch',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            height: 1,
+                            letterSpacing: -0.8,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Accuracy
+                    Expanded(
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          border: Border(
+                              left: BorderSide(color: Colors.black, width: 3)),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Accuracy text
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'ACCURACY',
+                                  style: TextStyle(
+                                    fontFamily: 'Courier',
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w500,
+                                    letterSpacing: 1.5,
+                                    color: Colors.black.withOpacity(0.4),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  '68.4%',
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 8),
+                            // Logout button
+                            IconButton(
+                              icon:
+                                  const Icon(Icons.logout, color: Colors.black),
+                              tooltip: 'Log out',
+                              onPressed: () async {
+                                await Supabase.instance.client.auth.signOut();
+                                // AuthGate will automatically handle showing login screen
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
           Expanded(
             child: _selectedIndex == 0
                 ? const FeedScreen()

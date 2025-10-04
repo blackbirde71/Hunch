@@ -33,33 +33,27 @@ Future<void> onSwipe(SwipeAction action) async {
         timeSpentSeconds: 5
     );
 
+    answerList.add(answer);
+
     marketsBox.put(market.id, market);
   }
 
   // Remove the current card from the cache
-  if (infoCache.isNotEmpty) {
+  if (infoCache.length <= cacheSize / 2) {
     infoCache.removeAt(0);
-  }
-
-  // Advance the queue index and persist it
-  qIndex = qIndex + 1;
-//   try {
-//     marketsBox.put('qIndex', qIndex);
-//   } catch (_) {
-//     // ignore if box isn't ready
-//   }
-
-
-  if (qIndex % 5 == 0) {
+  } else {
     // before fetching new questions, send most recent answers to supabase
-    
+    sendAnswers(answerList);
+    answerList.clear();
 
-    final nextIds = [questionIds[qIndex]];
+    // final nextIds = [questionIds[qIndex]];
 
-    final questions = await getQuestionsByIds(nextIds);
-    if (questions.isNotEmpty) {
-      infoCache.add(questions[0]);
-    }
+    // final questions = await getQuestionsByIds(nextIds);
+    // if (questions.isNotEmpty) {
+    //   infoCache.add(questions[0]);
+    // }
+    final nextQs = await getQuestionsByIds(cacheSize);
+
   }
 }
 
