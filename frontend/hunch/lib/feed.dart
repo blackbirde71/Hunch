@@ -5,10 +5,6 @@ import 'globals.dart';
 import 'market.dart';
 import 'database.dart';
 
-// Cards now use dynamic data from `infoCache` populated from the database.
-
-
-
 Future<void> onSwipe(SwipeAction action) async {
   // Persist what the user just swiped on
   if (infoCache.isNotEmpty) {
@@ -21,6 +17,22 @@ Future<void> onSwipe(SwipeAction action) async {
       action: action,
     );
 
+    var answerStr;
+    switch (action) {
+        case Action.yes:
+            answer = "yes";
+        case Action.no:
+            answer = "no";
+        case Action.blank:
+            answer = "blank";
+    }
+
+    final answer = Answer(
+        id: current['id'],
+        answer: answerStr,
+        timeSpentSeconds: 5
+    );
+
     marketsBox.put(market.id, market);
   }
 
@@ -31,15 +43,19 @@ Future<void> onSwipe(SwipeAction action) async {
 
   // Advance the queue index and persist it
   qIndex = qIndex + 1;
-  try {
-    marketsBox.put('qIndex', qIndex);
-  } catch (_) {
-    // ignore if box isn't ready
-  }
+//   try {
+//     marketsBox.put('qIndex', qIndex);
+//   } catch (_) {
+//     // ignore if box isn't ready
+//   }
 
-  // If there are more questions, fetch the next one and append
-  if (qIndex < questionIds.length) {
+
+  if (qIndex % 5 == 0) {
+    // before fetching new questions, send most recent answers to supabase
+    
+
     final nextIds = [questionIds[qIndex]];
+
     final questions = await getQuestionsByIds(nextIds);
     if (questions.isNotEmpty) {
       infoCache.add(questions[0]);
