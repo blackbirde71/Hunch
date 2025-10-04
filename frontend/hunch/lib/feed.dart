@@ -69,7 +69,6 @@ List<int> getCacheQIDs(List<Map<String, dynamic>> infoCache) {
   return ret;
 }
 
-
 class FeedScreen extends StatelessWidget {
   const FeedScreen({super.key});
 
@@ -298,7 +297,8 @@ class _SwipeableCardState extends State<SwipeableCard> {
                     children: [
                       // Base card container
                       Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 40),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           border: Border.all(color: Colors.black, width: 3),
@@ -317,10 +317,12 @@ class _SwipeableCardState extends State<SwipeableCard> {
                           child: Opacity(
                             opacity: ((_dragX.abs() - 40) / 60).clamp(0.0, 1.0),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 28, vertical: 16),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFEF4444),
-                                border: Border.all(color: Colors.black, width: 3),
+                                border:
+                                    Border.all(color: Colors.black, width: 3),
                                 boxShadow: const [
                                   BoxShadow(
                                     color: Colors.black,
@@ -346,10 +348,12 @@ class _SwipeableCardState extends State<SwipeableCard> {
                           child: Opacity(
                             opacity: ((_dragX.abs() - 40) / 60).clamp(0.0, 1.0),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 28, vertical: 16),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFA3E635),
-                                border: Border.all(color: Colors.black, width: 3),
+                                border:
+                                    Border.all(color: Colors.black, width: 3),
                                 boxShadow: const [
                                   BoxShadow(
                                     color: Colors.black,
@@ -384,7 +388,8 @@ class _SwipeableCardState extends State<SwipeableCard> {
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     border: Border.all(color: Colors.black, width: 3),

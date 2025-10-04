@@ -38,13 +38,6 @@ Future<void> main() async {
 
   marketsBox = await Hive.openBox<Market>('markets');
 
-  final user = Supabase.instance.client.auth.currentUser;
-  if (user != null) {
-    questionIds = await getQuestionIds();
-
-    infoCache = await getUnansweredQuestions(cacheSize, []);
-  }
-
   // remember which questions we've seen
   // qIndex = marketsBox.get("qIndex") ?? cacheSize;
 
@@ -76,15 +69,21 @@ final disableAuth = false;
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
+  Future<void> _initializeUserData() async {
+    print("super cool");
+    infoCache = await getUnansweredQuestions(cacheSize, []);
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<AuthState>(
       stream: Supabase.instance.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
-        // Check if user is signed in
         final session = snapshot.hasData ? snapshot.data!.session : null;
 
         if (disableAuth || session != null) {
+          // Initialize data when user signs in
+          _initializeUserData();
           return const MainScreen();
         } else {
           return AuthScreen();
@@ -116,6 +115,13 @@ class _MainScreenState extends State<MainScreen>
       duration: const Duration(milliseconds: 1600),
       vsync: this,
     )..repeat(reverse: true);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        infoCache = await getUnansweredQuestions(cacheSize, []);
+      }
+    });
 
     _translateYAnimation = Tween<double>(
       begin: -3.0,
