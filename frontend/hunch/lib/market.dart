@@ -1,9 +1,24 @@
-import 'package:isar/isar.dart';
+import 'package:hive/hive.dart';
 
-part 'market.g.dart';
+part 'market.g.dart'; // generated automatically
 
-@collection
-class Market {
+@HiveType(typeId: 0)
+class Market extends HiveObject {
+  @HiveField(0)
+  String id;
+
+  @HiveField(1)
+  String question;
+
+  @HiveField(2)
+  String description;
+
+  @HiveField(3)
+  double price;
+
+  @HiveField(4)
+  SwipeAction action;
+
   Market({
     required this.id,
     required this.question,
@@ -11,17 +26,14 @@ class Market {
     required this.price,
     required this.action,
   });
-
-  final Id id;
-  final String question;
-  final String description;
-  final double price;
-  @enumerated
-  final Action action;
 }
 
-enum Action {
+@HiveType(typeId: 1)
+enum SwipeAction {
+  @HiveField(0)
   yes,
+  @HiveField(1)
   no,
-  blank
+  @HiveField(2)
+  blank,
 }

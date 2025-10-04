@@ -4,6 +4,8 @@ go 1.24.1
 
 require (
 	github.com/joho/godotenv v1.5.1
+	github.com/supabase-community/supabase-go v0.0.4
+	golang.org/x/sync v0.17.0
 	google.golang.org/genai v1.28.0
 )
 
@@ -21,7 +23,6 @@ require (
 	github.com/supabase-community/gotrue-go v1.2.0 // indirect
 	github.com/supabase-community/postgrest-go v0.0.11 // indirect
 	github.com/supabase-community/storage-go v0.7.0 // indirect
-	github.com/supabase-community/supabase-go v0.0.4 // indirect
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.27.0 // indirect
