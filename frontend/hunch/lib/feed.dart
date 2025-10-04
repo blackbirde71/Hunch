@@ -169,13 +169,19 @@ class CardContent extends StatelessWidget {
             decoration: const BoxDecoration(
               border: Border(bottom: BorderSide(color: Colors.black, width: 3)),
             ),
-            child: (data['picture_data'] != null)
-                ? Image.memory(
-                    data['picture_data'],
+            child: (data['image_url'] != null && (data['image_url'] as String).isNotEmpty)
+                ? Image.network(
+                    data['image_url'] as String,
                     fit: BoxFit.cover,
                     width: double.infinity,
                   )
-                : Container(color: const Color(0xFFE5E5E5)),
+                : (data['picture_data'] != null)
+                    ? Image.memory(
+                        data['picture_data'],
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                      )
+                    : Container(color: const Color(0xFFE5E5E5)),
           ),
         ),
         // Question
