@@ -6,74 +6,6 @@ import 'market.dart';
 import 'database.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 
-Future<void> onSwipe(SwipeAction action) async {
-  if (infoCache.isEmpty) {
-    return;
-  }
-  // Persist what the user just swiped on
-  if (infoCache.isNotEmpty) {
-    final current = infoCache[0];
-    final market = Market(
-      id: (current?['id'] ?? '').toString(),
-      question: (current?['question'] ?? '') as String,
-      description: (current?['description'] ?? '') as String,
-      price: ((current?['yes_price']) as num?)?.toDouble() ?? 0.0,
-      action: action,
-    );
-
-    String answerStr;
-    switch (action) {
-      case SwipeAction.yes:
-        answerStr = "yes";
-        break;
-      case SwipeAction.no:
-        answerStr = "no";
-        break;
-      case SwipeAction.blank:
-        answerStr = "blank";
-        break;
-    }
-
-    final answerRecord = Answer(
-      questionId: current['id'] as int,
-      answer: answerStr,
-    );
-
-    answerList.add(answerRecord);
-
-    marketsBox.put(market.id, market);
-  }
-
-  // Remove the current card from the cache
-  infoCache.removeAt(0);
-  if (infoCache.length <= cacheSize / 2) {
-    // before fetching new questions, send most recent answers to supabase
-    sendAnswers(answerList);
-    answerList.clear();
-
-    // final nextIds = [questionIds[qIndex]];
-
-    // final questions = await getQuestionsByIds(nextIds);
-    // if (questions.isNotEmpty) {
-    //   infoCache.add(questions[0]);
-    // }
-
-    // get the question ids of the pat ones
-    List<int> pastQIDS = getCacheQIDs(infoCache);
-
-    for (Answer a in answerList) {
-      pastQIDS.add(a.questionId);
-    }
-
-    print("yipee");
-    updateCache(pastQIDS);
-  }
-}
-
-void updateCache(List<int> pastQIDS) async {
-  infoCache.addAll(await getUnansweredQuestions(cacheSize, pastQIDS));
-}
-
 List<int> getCacheQIDs(List<Map<String, dynamic>> infoCache) {
   List<int> ret = [];
   for (int i = 0; i < infoCache.length; i++) {
@@ -110,58 +42,71 @@ class _CardStackState extends State<CardStack> {
     });
   }
 
+  @override
   Widget build(BuildContext context) {
-    // Show completion state only AFTER final swipe
-    if (_allComplete) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(40),
-          child: Text(
-            "You completed all hunches!",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w700,
-              height: 1.2,
-              letterSpacing: -0.5,
-              color: Colors.black.withOpacity(0.4),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Stack(
-      children: [
-        // Peek card - only show if there's a next card
-        if (infoCache.length > 1)
-          Positioned.fill(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.black, width: 3),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black,
-                      offset: Offset(8, 8),
-                    ),
-                  ],
+    return ValueListenableBuilder<bool>(
+      valueListenable: loadingCache, // your global ValueNotifier<bool>
+      builder: (context, isLoading, child) {
+        // Show completion state only AFTER final swipe
+        if (infoCache.isEmpty) {
+          if (isLoading) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          } else {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(40),
+                child: Text(
+                  "You completed all hunches!",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                    letterSpacing: -0.5,
+                    color: Colors.black.withOpacity(0.4),
+                  ),
                 ),
-                child: CardContent(data: infoCache[1]),
               ),
-            ),
-          ),
-        // Active card - always swipeable when not complete
-        Center(
-          child: SwipeableCard(
-            data: infoCache.isNotEmpty ? infoCache[0] : <String, dynamic>{},
-            onSwiped: _onCardSwiped,
-            showInstructions: qIndex == cacheSize,
-          ),
-        ),
-      ],
+            );
+          }
+        }
+
+        // Normal card stack
+        return Stack(
+          children: [
+            if (infoCache.length > 1)
+              Positioned.fill(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: Colors.black, width: 3),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black,
+                          offset: Offset(8, 8),
+                        ),
+                      ],
+                    ),
+                    child: CardContent(data: infoCache[1]),
+                  ),
+                ),
+              ),
+            if (infoCache.isNotEmpty)
+              Center(
+                child: SwipeableCard(
+                  data: infoCache[0],
+                  onSwiped: _onCardSwiped,
+                  showInstructions: qIndex == cacheSize,
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -184,7 +129,8 @@ class CardContent extends StatelessWidget {
             decoration: const BoxDecoration(
               border: Border(bottom: BorderSide(color: Colors.black, width: 3)),
             ),
-            child: (data['image_url'] != null && (data['image_url'] as String).isNotEmpty)
+            child: (data['image_url'] != null &&
+                    (data['image_url'] as String).isNotEmpty)
                 ? Image.network(
                     data['image_url'] as String,
                     fit: BoxFit.cover,
@@ -275,6 +221,75 @@ class _SwipeableCardState extends State<SwipeableCard> {
       _dragX += details.delta.dx;
       _dragY += details.delta.dy;
     });
+  }
+
+  void updateCache(List<int> pastQIDS) async {
+    loadingCache.value = true;
+    infoCache.addAll(await getUnansweredQuestions(cacheSize, pastQIDS));
+    loadingCache.value = false;
+  }
+
+  Future<void> onSwipe(SwipeAction action) async {
+    if (infoCache.isEmpty) {
+      return;
+    }
+    // Persist what the user just swiped on
+    if (infoCache.isNotEmpty) {
+      final current = infoCache[0];
+      final market = Market(
+        id: (current?['id'] ?? '').toString(),
+        question: (current?['question'] ?? '') as String,
+        description: (current?['description'] ?? '') as String,
+        price: ((current?['yes_price']) as num?)?.toDouble() ?? 0.0,
+        action: action,
+      );
+
+      String answerStr;
+      switch (action) {
+        case SwipeAction.yes:
+          answerStr = "yes";
+          break;
+        case SwipeAction.no:
+          answerStr = "no";
+          break;
+        case SwipeAction.blank:
+          answerStr = "blank";
+          break;
+      }
+
+      final answerRecord = Answer(
+        questionId: current['id'] as int,
+        answer: answerStr,
+      );
+
+      answerList.add(answerRecord);
+
+      marketsBox.put(market.id, market);
+    }
+
+    // Remove the current card from the cache
+    infoCache.removeAt(0);
+    if (infoCache.length <= cacheSize / 2) {
+      // before fetching new questions, send most recent answers to supabase
+      sendAnswers(answerList);
+      answerList.clear();
+
+      // final nextIds = [questionIds[qIndex]];
+
+      // final questions = await getQuestionsByIds(nextIds);
+      // if (questions.isNotEmpty) {
+      //   infoCache.add(questions[0]);
+      // }
+
+      // get the question ids of the pat ones
+      List<int> pastQIDS = getCacheQIDs(infoCache);
+
+      for (Answer a in answerList) {
+        pastQIDS.add(a.questionId);
+      }
+
+      updateCache(pastQIDS);
+    }
   }
 
   void _onPanEnd(DragEndDetails details) async {

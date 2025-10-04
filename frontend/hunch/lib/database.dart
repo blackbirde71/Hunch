@@ -3,6 +3,7 @@
 // batch get stuff from id
 
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -100,7 +101,19 @@ Future<List<Map<String, dynamic>>> getUnansweredQuestions(
   };
 
   final unansweredIds =
-      allIds.where((id) => !answeredIds.contains(id)).take(limit).toList();
+      allIds.where((id) => !answeredIds.contains(id)).toList();
+
+  final random = Random();
+  final selectedIds = <int>[];
+  final usedIndices = <int>{};
+
+  final take = min(limit, unansweredIds.length);
+  while (selectedIds.length < take) {
+    final index = random.nextInt(unansweredIds.length);
+    if (usedIndices.add(index)) {
+      selectedIds.add(unansweredIds[index]);
+    }
+  }
 
   return await getQuestionsByIds(unansweredIds);
 }
