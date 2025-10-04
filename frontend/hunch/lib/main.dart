@@ -13,7 +13,7 @@ late List<Map<String, dynamic>> infoCache;
 final cacheSize = 2;
 
 void onSwipe(SwipeAction action) async {
-
+  
 }
 
 Future<void> main() async {

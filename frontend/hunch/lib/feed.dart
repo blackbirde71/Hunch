@@ -1,4 +1,3 @@
-
 // feed.dart
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -20,14 +19,7 @@ class FeedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Card Stack
-        const Expanded(
-          child: CardStack(),
-        ),
-      ],
-    );
+    return const CardStack();
   }
 }
 
@@ -124,29 +116,103 @@ class _CardStackState extends State<CardStack> {
 
     return Stack(
       children: [
-        // Next card peek
+        // Next card peek - fully rendered with actual content
         if (currentCard < cards.length - 1)
-          Center(
-            child: Transform.scale(
-              scale: 0.94,
-              child: Opacity(
-                opacity: 0.35,
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE5E5E5),
-                    border: Border.all(color: Colors.black, width: 3),
-                  ),
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black, width: 3),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black,
+                      offset: Offset(8, 8),
+                    ),
+                  ],
                 ),
+                child: CardContent(card: cards[currentCard + 1]),
               ),
             ),
           ),
-        // Active card
+        // Active swipeable card
         Center(
           child: SwipeableCard(
             card: cards[currentCard],
             onSwiped: _onCardSwiped,
             showInstructions: currentCard == 0,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Shared card content component - single source of truth for card presentation
+class CardContent extends StatelessWidget {
+  final PredictionCard card;
+
+  const CardContent({super.key, required this.card});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Image
+        Expanded(
+          flex: 5,
+          child: Container(
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Colors.black, width: 3)),
+            ),
+            child: Image.network(
+              card.imageUrl,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(color: const Color(0xFFE5E5E5));
+              },
+            ),
+          ),
+        ),
+        // Question
+        Expanded(
+          flex: 4,
+          child: Container(
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Colors.black, width: 3)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+            child: Center(
+              child: Text(
+                card.question,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w700,
+                  height: 1.15,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+          ),
+        ),
+        // Context
+        Container(
+          color: const Color(0xFFF5F5F5),
+          padding: const EdgeInsets.all(16),
+          child: Center(
+            child: Text(
+              card.context,
+              style: TextStyle(
+                fontFamily: 'Courier',
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.5,
+                color: Colors.black.withOpacity(0.5),
+              ),
+            ),
           ),
         ),
       ],
@@ -172,12 +238,17 @@ class SwipeableCard extends StatefulWidget {
 
 class _SwipeableCardState extends State<SwipeableCard> {
   double _dragX = 0;
-  bool _isDragging = false;
+  double _dragY = 0;
+  Offset _dragStart = Offset.zero;
+
+  void _onPanStart(DragStartDetails details) {
+    _dragStart = details.localPosition;
+  }
 
   void _onPanUpdate(DragUpdateDetails details) {
     setState(() {
       _dragX += details.delta.dx;
-      _isDragging = true;
+      _dragY += details.delta.dy;
     });
   }
 
@@ -186,183 +257,121 @@ class _SwipeableCardState extends State<SwipeableCard> {
       widget.onSwiped();
       setState(() {
         _dragX = 0;
-        _isDragging = false;
+        _dragY = 0;
       });
     } else {
       setState(() {
         _dragX = 0;
-        _isDragging = false;
+        _dragY = 0;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final rotation = _dragX * 0.03 / 180 * math.pi;
+    final rotation = (_dragX / MediaQuery.of(context).size.width) * 0.4;
     final opacity = (1 - _dragX.abs() / 500).clamp(0.0, 1.0);
     final scale = (1 - _dragX.abs() / 3000).clamp(0.0, 1.0);
 
     return GestureDetector(
+      onPanStart: _onPanStart,
       onPanUpdate: _onPanUpdate,
       onPanEnd: _onPanEnd,
       child: Stack(
         children: [
-          // Card
+          // Card with embedded Yes/No overlays
           Transform.translate(
-            offset: Offset(_dragX, 0),
+            offset: Offset(_dragX, _dragY * 0.3),
             child: Transform.rotate(
               angle: rotation,
+              alignment: Alignment.center,
               child: Transform.scale(
                 scale: scale,
                 child: Opacity(
                   opacity: opacity,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: Colors.black, width: 3),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black,
-                          offset: Offset(8, 8),
+                  child: Stack(
+                    children: [
+                      // Base card container
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.black, width: 3),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black,
+                              offset: Offset(8, 8),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        // Image
-                        Expanded(
-                          flex: 5,
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              border: Border(bottom: BorderSide(color: Colors.black, width: 3)),
-                            ),
-                            child: Image.network(
-                              widget.card.imageUrl,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(color: const Color(0xFFE5E5E5));
-                              },
-                            ),
-                          ),
-                        ),
-                        // Question
-                        Expanded(
-                          flex: 4,
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              border: Border(bottom: BorderSide(color: Colors.black, width: 3)),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
-                            child: Center(
-                              child: Text(
-                                widget.card.question,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.15,
+                        child: CardContent(card: widget.card),
+                      ),
+                      // Yes/No overlays - centered on the card itself
+                      if (_dragX < -40)
+                        Center(
+                          child: Opacity(
+                            opacity: ((_dragX.abs() - 40) / 60).clamp(0.0, 1.0),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEF4444),
+                                border: Border.all(color: Colors.black, width: 3),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black,
+                                    offset: Offset(4, 4),
+                                  ),
+                                ],
+                              ),
+                              child: const Text(
+                                'No',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 48,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1,
                                   letterSpacing: -0.5,
                                 ),
                               ),
                             ),
                           ),
                         ),
-                        // Context
-                        Container(
-                          color: const Color(0xFFF5F5F5),
-                          padding: const EdgeInsets.all(16),
-                          child: Center(
-                            child: Text(
-                              widget.card.context,
-                              style: TextStyle(
-                                fontFamily: 'Courier',
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 0.5,
-                                color: Colors.black.withOpacity(0.5),
+                      if (_dragX > 40)
+                        Center(
+                          child: Opacity(
+                            opacity: ((_dragX.abs() - 40) / 60).clamp(0.0, 1.0),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFA3E635),
+                                border: Border.all(color: Colors.black, width: 3),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black,
+                                    offset: Offset(4, 4),
+                                  ),
+                                ],
+                              ),
+                              child: const Text(
+                                'Yes',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 48,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1,
+                                  letterSpacing: -0.5,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
               ),
             ),
           ),
-          // Swipe indicators
-          if (_dragX < -40)
-            Positioned(
-              left: 20,
-              top: MediaQuery.of(context).size.height / 2 - 100,
-              child: Opacity(
-                opacity: ((_dragX.abs() - 40) / 60).clamp(0.0, 1.0),
-                child: Transform.translate(
-                  offset: Offset(_dragX, 0),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEF4444),
-                      border: Border.all(color: Colors.black, width: 3),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black,
-                          offset: Offset(4, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Text(
-                      'No',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 36,
-                        fontWeight: FontWeight.w800,
-                        height: 1,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          if (_dragX > 40)
-            Positioned(
-              right: 20,
-              top: MediaQuery.of(context).size.height / 2 - 100,
-              child: Opacity(
-                opacity: ((_dragX.abs() - 40) / 60).clamp(0.0, 1.0),
-                child: Transform.translate(
-                  offset: Offset(_dragX, 0),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFA3E635),
-                      border: Border.all(color: Colors.black, width: 3),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black,
-                          offset: Offset(4, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Text(
-                      'Yes',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 36,
-                        fontWeight: FontWeight.w800,
-                        height: 1,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          // Instructions overlay
+          // Instructions overlay - fixed to screen, not card
           if (widget.showInstructions)
             Positioned(
               top: 80,
