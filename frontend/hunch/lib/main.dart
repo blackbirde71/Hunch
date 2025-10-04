@@ -29,7 +29,7 @@ Future<void> main() async {
   questionIds = await getQuestionIds();
 
   // infoCache = await getQuestionsByIds(questionIds.sublist(0, cacheSize));
-  infoCache = await getQuestionsByIds(cacheSize);
+  infoCache = await getUnansweredQuestions(cacheSize, []);
 
   // final testMarket = Market(
   //   id: "111",

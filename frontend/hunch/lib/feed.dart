@@ -17,22 +17,25 @@ Future<void> onSwipe(SwipeAction action) async {
       action: action,
     );
 
-    var answerStr;
+    String answerStr;
     switch (action) {
-        case Action.yes:
-            answer = "yes";
-        case Action.no:
-            answer = "no";
-        case Action.blank:
-            answer = "blank";
+      case SwipeAction.yes:
+        answerStr = "yes";
+        break;
+      case SwipeAction.no:
+        answerStr = "no";
+        break;
+      case SwipeAction.blank:
+        answerStr = "blank";
+        break;
     }
 
-    final answer = Answer(
-        id: current['id'],
-        answer: answerStr,
+    final answerRecord = Answer(
+      questionId: current['id'] as int,
+      answer: answerStr,
     );
 
-    answerList.add(answer);
+    answerList.add(answerRecord);
 
     marketsBox.put(market.id, market);
   }
@@ -52,18 +55,18 @@ Future<void> onSwipe(SwipeAction action) async {
     //   infoCache.add(questions[0]);
     // }
     final cacheQIDs = getCacheQIDs(infoCache);
-    final nextQs = await getUnansweredQuestions(cacheSize / 2, cacheQIDs);
+    final nextQs = await getUnansweredQuestions(cacheSize ~/ 2, cacheQIDs);
     infoCache.addAll(nextQs);
   }
 }
 
 List<int> getCacheQIDs(List<Map<String, dynamic>> infoCache) {
-    List<int> ret = [];
-
-    for (int i = 0; i < infoCache.length; i++) {
-        ret.add(infoCache[i].id);
-    }
-    return ret;
+  List<int> ret = [];
+  for (int i = 0; i < infoCache.length; i++) {
+    final id = infoCache[i]['id'];
+    if (id is int) ret.add(id);
+  }
+  return ret;
 }
 
 
