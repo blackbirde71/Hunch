@@ -30,7 +30,6 @@ Future<void> onSwipe(SwipeAction action) async {
     final answer = Answer(
         id: current['id'],
         answer: answerStr,
-        timeSpentSeconds: 5
     );
 
     answerList.add(answer);
@@ -52,9 +51,19 @@ Future<void> onSwipe(SwipeAction action) async {
     // if (questions.isNotEmpty) {
     //   infoCache.add(questions[0]);
     // }
-    final nextQs = await getQuestionsByIds(cacheSize);
-
+    final cacheQIDs = getCacheQIDs(infoCache);
+    final nextQs = await getUnansweredQuestions(cacheSize / 2, cacheQIDs);
+    infoCache.addAll(nextQs);
   }
+}
+
+List<int> getCacheQIDs(List<Map<String, dynamic>> infoCache) {
+    List<int> ret = [];
+
+    for (int i = 0; i < infoCache.length; i++) {
+        ret.add(infoCache[i].id);
+    }
+    return ret;
 }
 
 

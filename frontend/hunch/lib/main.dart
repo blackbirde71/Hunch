@@ -10,31 +10,6 @@ import 'market.dart';
 import 'globals.dart';
 import 'auth.dart';
 
-void onSwipe(SwipeAction action) async {
-  // add to hive what the user just swiped on
-  marketsBox.put(infoCache[0]?['id'], {
-    'question': infoCache[0]?['question'],
-    'description': infoCache[0]?['description'],
-    'swipe': action
-  });
-
-  // remove the first card from the infoCache
-  if (infoCache.isNotEmpty) {
-    infoCache.removeAt(0);
-  }
-
-  // get the index of the next card
-  qIndex = qIndex + 1;
-
-  // get the next item from supabase
-  List<Map<String, dynamic>> questions =
-      await getQuestionsByIds([questionIds[qIndex]]);
-  Map<String, dynamic> nextCard = questions[0];
-
-  // add it to the cache
-  infoCache.add(nextCard);
-}
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
