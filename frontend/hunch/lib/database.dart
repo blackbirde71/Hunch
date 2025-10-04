@@ -111,6 +111,7 @@ Future<List<Map<String, dynamic>>> getUnansweredQuestions2(
   if (limit == 0) return [];
 
   final user = Supabase.instance.client.auth.currentUser;
+  
   if (user == null) {
     // If not signed in, just return random questions
     final questions = await supabase.from('questions').select().limit(limit);
@@ -126,6 +127,7 @@ Future<List<Map<String, dynamic>>> getUnansweredQuestions2(
     ...answered.map<int>((r) => r['question_id'] as int),
     ...cache
   ];
+  
 
   print("start q");
 
