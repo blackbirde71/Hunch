@@ -1,18 +1,50 @@
 // main.dart
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:hunch/database.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'feed.dart';
 import 'hunches.dart';
+import 'market.dart';
+
+late List<int> questionIds;
+late List<Map<String, dynamic>> infoCache;
+final cacheSize = 2;
+
+void onSwipe(SwipeAction action) async {
+
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await Hive.initFlutter();
+  Hive.registerAdapter(MarketAdapter());
+  Hive.registerAdapter(SwipeActionAdapter());
+
+  await Hive.openBox<Market>('markets');
+  
+  // db init
   await Supabase.initialize(
     url: 'https://benwvphuubnrzdlhvjzu.supabase.co',
     // dont flame it is anon key
     anonKey: 'sb_publishable_JiGhx5v95JaN977zMHHlRA_A2nn7wnT',
   );
+
+  questionIds = await getQuestionIds();
+  infoCache = await getQuestionsByIds(questionIds.sublist(0, cacheSize));
+
+  final testMarket = Market(
+    id: "111",
+    question: "HI?!",
+    description: "ajsdfnjksd,nfkshb",
+    price: 0.2,
+    action: SwipeAction.blank
+  );
+  var marketsBox = await Hive.openBox<Market>('markets');
+  marketsBox.put(testMarket.id, testMarket);
+
+  print(marketsBox.get(testMarket.id));
 
   runApp(const HunchApp());
 }
