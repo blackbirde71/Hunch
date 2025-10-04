@@ -2,6 +2,7 @@
 
 // batch get stuff from id
 
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -14,15 +15,6 @@ final supabase = Supabase.instance.client;
 Future<List<int>> getQuestionIds() async {
   final response = await supabase.from('questions').select('id');
   return response.map<int>((row) => row['id'] as int).toList();
-}
-
-/// Used internally do not call
-Uint8List _hexToBytes(String hex) {
-  final bytes = Uint8List(hex.length ~/ 2);
-  for (int i = 0; i < hex.length; i += 2) {
-    bytes[i ~/ 2] = int.parse(hex.substring(i, i + 2), radix: 16);
-  }
-  return bytes;
 }
 
 /// Fetches questions by their IDs.
@@ -45,8 +37,9 @@ Future<List<Map<String, dynamic>>> getQuestionsByIds(List<int> ids) async {
 
   // Convert hex images to bytes
   return response.map((question) {
-    if (question['picture_hex'] != null) {
-      question['picture_data'] = _hexToBytes(question['picture_hex'] as String);
+    if (question['picture_base64'] != null) {
+      question['picture_data'] =
+          base64Decode(question['picture_base64'] as String);
     }
     return question;
   }).toList();
