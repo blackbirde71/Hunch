@@ -41,9 +41,8 @@ Future<void> onSwipe(SwipeAction action) async {
   }
 
   // Remove the current card from the cache
+  infoCache.removeAt(0);
   if (infoCache.length <= cacheSize / 2) {
-    infoCache.removeAt(0);
-  } else {
     // before fetching new questions, send most recent answers to supabase
     sendAnswers(answerList);
     answerList.clear();
@@ -54,8 +53,17 @@ Future<void> onSwipe(SwipeAction action) async {
     // if (questions.isNotEmpty) {
     //   infoCache.add(questions[0]);
     // }
+
+    // get the question ids of the pat ones
+    List<int> pastQIDS = getCacheQIDs(infoCache);
+
+    for (Answer a in answerList) {
+      pastQIDS.add(a.questionId);
+    }
+
+    print("yipee");
     final cacheQIDs = getCacheQIDs(infoCache);
-    final nextQs = await getUnansweredQuestions(cacheSize ~/ 2, cacheQIDs);
+    final nextQs = await getUnansweredQuestions(cacheSize, pastQIDS);
     infoCache.addAll(nextQs);
   }
 }
