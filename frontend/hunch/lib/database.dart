@@ -51,10 +51,12 @@ Future<List<int>> getQuestionIds() async {
 Future<List<Map<String, dynamic>>> getQuestionsByIds(List<int> ids) async {
   if (ids.isEmpty) return [];
 
+  print(ids);
   final response =
       await supabase.from('questions').select().inFilter('id', ids);
 
   // Convert hex images to bytes
+  print("done");
   return response.map((question) {
     if (question['picture_base64'] != null) {
       question['picture_data'] =
@@ -72,12 +74,44 @@ Map<String, dynamic> _processQuestion(Map<String, dynamic> question) {
   return question;
 }
 
-/// Fetches up to `limit` questions that the user has not seen and are not in `cache`.
 Future<List<Map<String, dynamic>>> getUnansweredQuestions(
+    int limit, List<int> inCache) async {
+  if (limit == 0) return [];
+
+  final user = Supabase.instance.client.auth.currentUser;
+
+  // 1️⃣ Get all question IDs
+  final allIdsResponse = await supabase.from('questions').select('id');
+  final allIds = allIdsResponse.map<int>((q) => q['id'] as int).toList();
+
+  if (user == null) {
+    final selectedIds = allIds.take(limit).toList();
+    return await getQuestionsByIds(selectedIds);
+  }
+
+  final answeredResponse = await supabase
+      .from('user_interactions')
+      .select('question_id')
+      .eq('user_id', user.id);
+
+  final answeredIds = {
+    ...answeredResponse.map<int>((r) => r['question_id'] as int),
+    ...inCache,
+  };
+
+  final unansweredIds =
+      allIds.where((id) => !answeredIds.contains(id)).take(limit).toList();
+
+  return await getQuestionsByIds(unansweredIds);
+}
+
+/// Fetches up to `limit` questions that the user has not seen and are not in `cache`.
+Future<List<Map<String, dynamic>>> getUnansweredQuestions2(
     int limit, List<int> cache) async {
   if (limit == 0) return [];
 
   final user = Supabase.instance.client.auth.currentUser;
+  
   if (user == null) {
     // If not signed in, just return random questions
     final questions = await supabase.from('questions').select().limit(limit);
@@ -93,12 +127,17 @@ Future<List<Map<String, dynamic>>> getUnansweredQuestions(
     ...answered.map<int>((r) => r['question_id'] as int),
     ...cache
   ];
+  
+
+  print("start q");
 
   final questions = await supabase
       .from('questions')
       .select()
       .not('id', 'in', answeredIds)
       .limit(limit);
+
+  print("end q");
 
   return questions.map(_processQuestion).toList();
 }

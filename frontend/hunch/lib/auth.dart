@@ -1,5 +1,7 @@
 // lib/screens/auth_screen.dart
 import 'package:flutter/material.dart';
+import 'package:hunch/database.dart';
+import 'package:hunch/globals.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthScreen extends StatefulWidget {
