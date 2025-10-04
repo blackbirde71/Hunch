@@ -116,13 +116,6 @@ class _MainScreenState extends State<MainScreen>
       vsync: this,
     )..repeat(reverse: true);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user != null) {
-        infoCache = await getUnansweredQuestions(cacheSize, []);
-      }
-    });
-
     _translateYAnimation = Tween<double>(
       begin: -3.0,
       end: 3.0,
