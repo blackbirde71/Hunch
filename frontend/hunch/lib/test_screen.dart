@@ -181,7 +181,19 @@ class _TestImageScreenState extends State<TestImageScreen> {
                             SizedBox(height: 16),
 
                             // Image
-                            if (question!['picture_data'] != null) ...[
+                            if (question!['image_url'] != null && (question!['image_url'] as String).isNotEmpty) ...[
+                              Container(
+                                decoration: BoxDecoration(
+                                  border:
+                                      Border.all(color: Colors.black, width: 2),
+                                ),
+                                child: Image.network(
+                                  question!['image_url'] as String,
+                                  fit: BoxFit.contain,
+                                  width: double.infinity,
+                                ),
+                              ),
+                            ] else if (question!['picture_data'] != null) ...[
                               Container(
                                 decoration: BoxDecoration(
                                   border:
