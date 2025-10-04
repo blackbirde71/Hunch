@@ -5,10 +5,6 @@ import 'globals.dart';
 import 'market.dart';
 import 'database.dart';
 
-// Cards now use dynamic data from `infoCache` populated from the database.
-
-
-
 Future<void> onSwipe(SwipeAction action) async {
   // Persist what the user just swiped on
   if (infoCache.isNotEmpty) {
@@ -21,29 +17,43 @@ Future<void> onSwipe(SwipeAction action) async {
       action: action,
     );
 
+    var answerStr;
+    switch (action) {
+        case Action.yes:
+            answer = "yes";
+        case Action.no:
+            answer = "no";
+        case Action.blank:
+            answer = "blank";
+    }
+
+    final answer = Answer(
+        id: current['id'],
+        answer: answerStr,
+        timeSpentSeconds: 5
+    );
+
+    answerList.add(answer);
+
     marketsBox.put(market.id, market);
   }
 
   // Remove the current card from the cache
-  if (infoCache.isNotEmpty) {
+  if (infoCache.length <= cacheSize / 2) {
     infoCache.removeAt(0);
-  }
+  } else {
+    // before fetching new questions, send most recent answers to supabase
+    sendAnswers(answerList);
+    answerList.clear();
 
-  // Advance the queue index and persist it
-  qIndex = qIndex + 1;
-  try {
-    marketsBox.put('qIndex', qIndex);
-  } catch (_) {
-    // ignore if box isn't ready
-  }
+    // final nextIds = [questionIds[qIndex]];
 
-  // If there are more questions, fetch the next one and append
-  if (qIndex < questionIds.length) {
-    final nextIds = [questionIds[qIndex]];
-    final questions = await getQuestionsByIds(nextIds);
-    if (questions.isNotEmpty) {
-      infoCache.add(questions[0]);
-    }
+    // final questions = await getQuestionsByIds(nextIds);
+    // if (questions.isNotEmpty) {
+    //   infoCache.add(questions[0]);
+    // }
+    final nextQs = await getQuestionsByIds(cacheSize);
+
   }
 }
 

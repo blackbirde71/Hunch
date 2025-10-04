@@ -10,6 +10,30 @@ import 'market.dart';
 import 'globals.dart';
 import 'auth.dart';
 
+void onSwipe(SwipeAction action) async {
+  // add to hive what the user just swiped on
+  marketsBox.put(infoCache[0]?['id'], {
+    'question': infoCache[0]?['question'],
+    'description': infoCache[0]?['description'],
+    'swipe': action
+  });
+
+  // remove the first card from the infoCache
+  if (infoCache.isNotEmpty) {
+    infoCache.removeAt(0);
+  }
+
+  // get the index of the next card
+  qIndex = qIndex + 1;
+
+  // get the next item from supabase
+  List<Map<String, dynamic>> questions =
+      await getQuestionsByIds([questionIds[qIndex]]);
+  Map<String, dynamic> nextCard = questions[0];
+
+  // add it to the cache
+  infoCache.add(nextCard);
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +43,7 @@ Future<void> main() async {
   Hive.registerAdapter(SwipeActionAdapter());
 
   await Hive.openBox<Market>('markets');
-  
+
   // db init
   await Supabase.initialize(
     url: 'https://benwvphuubnrzdlhvjzu.supabase.co',
@@ -29,25 +53,25 @@ Future<void> main() async {
 
   questionIds = await getQuestionIds();
 
-  // TODO: need to remove the questionIDs we've already seen
-  infoCache = await getQuestionsByIds(questionIds.sublist(0, cacheSize));
+  // infoCache = await getQuestionsByIds(questionIds.sublist(0, cacheSize));
+  infoCache = await getQuestionsByIds(cacheSize);
 
-  final testMarket = Market(
-    id: "111",
-    question: "HI?!",
-    description: "ajsdfnjksd,nfkshb",
-    price: 0.2,
-    action: SwipeAction.blank
-  );
+  // final testMarket = Market(
+  //   id: "111",
+  //   question: "HI?!",
+  //   description: "ajsdfnjksd,nfkshb",
+  //   price: 0.2,
+  //   action: SwipeAction.blank
+  // );
 
   marketsBox = await Hive.openBox<Market>('markets');
 
   // remember which questions we've seen
-  qIndex = marketsBox.get("qIndex") ?? cacheSize;
+  // qIndex = marketsBox.get("qIndex") ?? cacheSize;
 
-  marketsBox.put(testMarket.id, testMarket);
+  // marketsBox.put(testMarket.id, testMarket);
 
-  print(marketsBox.get(testMarket.id)?.question);
+  // print(marketsBox.get(testMarket.id)?.question);
 
   runApp(const HunchApp());
 }
@@ -181,29 +205,47 @@ class _MainScreenState extends State<MainScreen> {
                         ),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          mainAxisSize: MainAxisSize.min,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text(
-                              'ACCURACY',
-                              style: TextStyle(
-                                fontFamily: 'Courier',
-                                fontSize: 8,
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 1.5,
-                                color: Colors.black.withOpacity(0.4),
-                              ),
+                            // Accuracy text
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'ACCURACY',
+                                  style: TextStyle(
+                                    fontFamily: 'Courier',
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w500,
+                                    letterSpacing: 1.5,
+                                    color: Colors.black.withOpacity(0.4),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  '68.4%',
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 2),
-                            const Text(
-                              '68.4%',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w700,
-                                height: 1,
-                                letterSpacing: -0.5,
-                              ),
+                            const SizedBox(width: 8),
+                            // Logout button
+                            IconButton(
+                              icon:
+                                  const Icon(Icons.logout, color: Colors.black),
+                              tooltip: 'Log out',
+                              onPressed: () async {
+                                await Supabase.instance.client.auth.signOut();
+                                // AuthGate will automatically handle showing login screen
+                              },
                             ),
                           ],
                         ),
