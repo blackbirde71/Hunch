@@ -5,6 +5,7 @@ import 'globals.dart';
 import 'market.dart';
 import 'database.dart';
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 Future<void> onSwipe(SwipeAction action) async {
   // Persist what the user just swiped on
@@ -225,14 +226,55 @@ class CardContent extends StatelessWidget {
           color: const Color(0xFFF5F5F5),
           padding: const EdgeInsets.all(16),
           child: Center(
-            child: Text(
-              (data['description'] ?? '') as String,
-              style: TextStyle(
-                fontFamily: 'Courier',
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0.5,
-                color: Colors.black.withOpacity(0.5),
+            child: MarkdownBody(
+              data: (data['description'] ?? '') as String,
+              selectable: false,
+              softLineBreak: true,
+              styleSheet: MarkdownStyleSheet(
+                p: TextStyle(
+                  fontFamily: 'Courier',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.5,
+                  color: Colors.black.withOpacity(0.5),
+                  height: 1.3,
+                ),
+                h1: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                  color: Colors.black,
+                ),
+                h2: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                  color: Colors.black,
+                ),
+                h3: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.1,
+                  color: Colors.black,
+                ),
+                blockquote: TextStyle(
+                  fontFamily: 'Courier',
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.black.withOpacity(0.6),
+                ),
+                code: TextStyle(
+                  fontFamily: 'Courier',
+                  fontSize: 11,
+                  color: Colors.black.withOpacity(0.8),
+                ),
+                listBullet: TextStyle(
+                  fontFamily: 'Courier',
+                  fontSize: 11,
+                  color: Colors.black.withOpacity(0.5),
+                ),
+                blockSpacing: 8,
+                listIndent: 16,
               ),
             ),
           ),
