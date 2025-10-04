@@ -1,18 +1,52 @@
 // feed.dart
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'globals.dart';
+import 'market.dart';
+import 'database.dart';
 
-class PredictionCard {
-  final String question;
-  final String context;
-  final String imageUrl;
+// Cards now use dynamic data from `infoCache` populated from the database.
 
-  PredictionCard({
-    required this.question,
-    required this.context,
-    required this.imageUrl,
-  });
+
+
+Future<void> onSwipe(SwipeAction action) async {
+  // Persist what the user just swiped on
+  if (infoCache.isNotEmpty) {
+    final current = infoCache[0];
+    final market = Market(
+      id: (current?['id'] ?? '').toString(),
+      question: (current?['question'] ?? '') as String,
+      description: (current?['description'] ?? '') as String,
+      price: ((current?['yes_price']) as num?)?.toDouble() ?? 0.0,
+      action: action,
+    );
+
+    marketsBox.put(market.id, market);
+  }
+
+  // Remove the current card from the cache
+  if (infoCache.isNotEmpty) {
+    infoCache.removeAt(0);
+  }
+
+  // Advance the queue index and persist it
+  qIndex = qIndex + 1;
+  try {
+    marketsBox.put('qIndex', qIndex);
+  } catch (_) {
+    // ignore if box isn't ready
+  }
+
+  // If there are more questions, fetch the next one and append
+  if (qIndex < questionIds.length) {
+    final nextIds = [questionIds[qIndex]];
+    final questions = await getQuestionsByIds(nextIds);
+    if (questions.isNotEmpty) {
+      infoCache.add(questions[0]);
+    }
+  }
 }
+
 
 class FeedScreen extends StatelessWidget {
   const FeedScreen({super.key});
@@ -31,43 +65,11 @@ class CardStack extends StatefulWidget {
 }
 
 class _CardStackState extends State<CardStack> {
-  int currentCard = 0;
   bool _allComplete = false;
 
-  final List<PredictionCard> cards = [
-    PredictionCard(
-      question: 'Trump wins Pennsylvania',
-      context: 'Nov 5 → Nov 8',
-      imageUrl: 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=800&q=80',
-    ),
-    PredictionCard(
-      question: 'Bitcoin closes above \$70k this week',
-      context: 'Sunday 11:59pm EST',
-      imageUrl: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?w=800&q=80',
-    ),
-    PredictionCard(
-      question: 'OpenAI announces GPT-5 before December',
-      context: 'Official announcement only',
-      imageUrl: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80',
-    ),
-    PredictionCard(
-      question: 'S&P 500 breaks 6000 this month',
-      context: 'Intraday high counts',
-      imageUrl: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80',
-    ),
-    PredictionCard(
-      question: 'Major studio film uses AI actor in lead role',
-      context: 'Theatrical release by Dec 31',
-      imageUrl: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=800&q=80',
-    ),
-  ];
-
-   void _onCardSwiped() {
+  void _onCardSwiped() {
     setState(() {
-      if (currentCard < cards.length - 1) {
-        currentCard++;
-      } else {
-        // Last card was just swiped
+      if (infoCache.isEmpty && qIndex >= questionIds.length) {
         _allComplete = true;
       }
     });
@@ -97,7 +99,7 @@ class _CardStackState extends State<CardStack> {
     return Stack(
       children: [
         // Peek card - only show if there's a next card
-        if (currentCard < cards.length - 1)
+        if (infoCache.length > 1)
           Positioned.fill(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
@@ -112,17 +114,16 @@ class _CardStackState extends State<CardStack> {
                     ),
                   ],
                 ),
-                child: CardContent(card: cards[currentCard + 1]),
+                child: CardContent(data: infoCache[1]),
               ),
             ),
           ),
         // Active card - always swipeable when not complete
         Center(
           child: SwipeableCard(
-            card: cards[currentCard],
+            data: infoCache.isNotEmpty ? infoCache[0] : <String, dynamic>{},
             onSwiped: _onCardSwiped,
-            showInstructions: currentCard == 0,
-            isLastCard: currentCard == cards.length - 1, // Pass context to card
+            showInstructions: qIndex == cacheSize,
           ),
         ),
       ],
@@ -132,9 +133,9 @@ class _CardStackState extends State<CardStack> {
 
 // Shared card content component - single source of truth for card presentation
 class CardContent extends StatelessWidget {
-  final PredictionCard card;
+  final Map<String, dynamic> data;
 
-  const CardContent({super.key, required this.card});
+  const CardContent({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
@@ -147,14 +148,13 @@ class CardContent extends StatelessWidget {
             decoration: const BoxDecoration(
               border: Border(bottom: BorderSide(color: Colors.black, width: 3)),
             ),
-            child: Image.network(
-              card.imageUrl,
-              fit: BoxFit.cover,
-              width: double.infinity,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(color: const Color(0xFFE5E5E5));
-              },
-            ),
+            child: (data['picture_data'] != null)
+                ? Image.memory(
+                    data['picture_data'],
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                  )
+                : Container(color: const Color(0xFFE5E5E5)),
           ),
         ),
         // Question
@@ -167,7 +167,7 @@ class CardContent extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
             child: Center(
               child: Text(
-                card.question,
+                (data['question'] ?? '') as String,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 36,
@@ -185,7 +185,7 @@ class CardContent extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Center(
             child: Text(
-              card.context,
+              (data['description'] ?? '') as String,
               style: TextStyle(
                 fontFamily: 'Courier',
                 fontSize: 11,
@@ -202,17 +202,15 @@ class CardContent extends StatelessWidget {
 }
 
 class SwipeableCard extends StatefulWidget {
-  final PredictionCard card;
+  final Map<String, dynamic> data;
   final VoidCallback onSwiped;
   final bool showInstructions;
-  final bool isLastCard; // New parameter
 
   const SwipeableCard({
     super.key,
-    required this.card,
+    required this.data,
     required this.onSwiped,
     this.showInstructions = false,
-    this.isLastCard = false, // Default to false
   });
 
   @override
@@ -235,8 +233,10 @@ class _SwipeableCardState extends State<SwipeableCard> {
     });
   }
 
-  void _onPanEnd(DragEndDetails details) {
+  void _onPanEnd(DragEndDetails details) async {
     if (_dragX.abs() > 80) {
+      final action = _dragX > 0 ? SwipeAction.yes : SwipeAction.no;
+      await onSwipe(action);
       widget.onSwiped();
       setState(() {
         _dragX = 0;
@@ -287,7 +287,7 @@ class _SwipeableCardState extends State<SwipeableCard> {
                             ),
                           ],
                         ),
-                        child: CardContent(card: widget.card),
+                        child: CardContent(data: widget.data),
                       ),
                       // Yes/No overlays - centered on the card itself
                       if (_dragX < -40)
