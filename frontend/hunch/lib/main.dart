@@ -5,6 +5,7 @@ import 'package:hunch/test_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'feed.dart';
 import 'hunches.dart';
+import 'auth.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,8 +30,31 @@ class HunchApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFF5F5F5),
         fontFamily: 'System',
       ),
-      home: const MainScreen(),
+      home: const AuthGate(),
       debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+final disableAuth = false;
+
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<AuthState>(
+      stream: Supabase.instance.client.auth.onAuthStateChange,
+      builder: (context, snapshot) {
+        // Check if user is signed in
+        final session = snapshot.hasData ? snapshot.data!.session : null;
+
+        if (disableAuth || session != null) {
+          return const MainScreen();
+        } else {
+          return AuthScreen();
+        }
+      },
     );
   }
 }
