@@ -1,5 +1,6 @@
 // main.dart
 import 'package:flutter/material.dart';
+import 'package:hunch/database.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'feed.dart';
 import 'hunches.dart';
@@ -10,8 +11,7 @@ Future<void> main() async {
   await Supabase.initialize(
     url: 'https://benwvphuubnrzdlhvjzu.supabase.co',
     // dont flame it is anon key
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlbnd2cGh1dWJucnpkbGh2anp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1ODI1NjgsImV4cCI6MjA3NTE1ODU2OH0.jt5SrMqC91RhYNAqP3m1Ut7f9pOrZF8niI892OkUBFI',
+    anonKey: 'sb_publishable_JiGhx5v95JaN977zMHHlRA_A2nn7wnT',
   );
 
   runApp(const HunchApp());
