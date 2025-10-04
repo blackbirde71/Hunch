@@ -8,6 +8,9 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
 Future<void> onSwipe(SwipeAction action) async {
+  if (infoCache.isEmpty) {
+    return;
+  }
   // Persist what the user just swiped on
   if (infoCache.isNotEmpty) {
     final current = infoCache[0];
@@ -283,8 +286,6 @@ class CardContent extends StatelessWidget {
     );
   }
 }
-
-
 
 class SwipeableCard extends StatefulWidget {
   final Map<String, dynamic> data;
