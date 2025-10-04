@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'globals.dart';
 import 'market.dart';
 import 'database.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 
 Future<void> onSwipe(SwipeAction action) async {
   // Persist what the user just swiped on
@@ -163,6 +164,7 @@ class _CardStackState extends State<CardStack> {
 }
 
 // Shared card content component - single source of truth for card presentation
+
 class CardContent extends StatelessWidget {
   final Map<String, dynamic> data;
 
@@ -197,9 +199,11 @@ class CardContent extends StatelessWidget {
             ),
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
             child: Center(
-              child: Text(
+              child: AutoSizeText(
                 (data['question'] ?? '') as String,
                 textAlign: TextAlign.center,
+                maxLines: 4, // Prevent overflow; adjust as needed
+                minFontSize: 16, // Don't shrink below this size
                 style: const TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.w700,
@@ -231,6 +235,8 @@ class CardContent extends StatelessWidget {
     );
   }
 }
+
+
 
 class SwipeableCard extends StatefulWidget {
   final Map<String, dynamic> data;
