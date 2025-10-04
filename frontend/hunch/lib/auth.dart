@@ -69,6 +69,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 'Hunch',
                 style: TextStyle(
                   fontSize: 48,
+                  fontFamily: '',
                   fontWeight: FontWeight.w800,
                   letterSpacing: -1,
                 ),

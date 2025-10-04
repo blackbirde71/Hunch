@@ -4,6 +4,41 @@ import 'package:flutter/material.dart';
 class HunchesScreen extends StatelessWidget {
   const HunchesScreen({super.key});
 
+  // Mock data - replace with actual state management
+  final List<ActiveHunch> _activeHunches = const [
+    ActiveHunch(
+      question: 'Trump wins Pennsylvania',
+      context: 'Nov 5 → Nov 8',
+      userChoice: true,
+      marketConsensus: 67,
+      imageUrl: 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=800&q=80',
+    ),
+    ActiveHunch(
+      question: 'Bitcoin closes above \$70k this week',
+      context: 'Sunday 11:59pm EST',
+      userChoice: false,
+      marketConsensus: 43,
+      imageUrl: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?w=800&q=80',
+    ),
+    ActiveHunch(
+      question: 'OpenAI announces GPT-5 before December',
+      context: 'Official announcement only',
+      userChoice: true,
+      marketConsensus: 28,
+      imageUrl: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80',
+    ),
+  ];
+
+  double _calculateAverageGap() {
+    if (_activeHunches.isEmpty) return 0;
+    double totalGap = 0;
+    for (var hunch in _activeHunches) {
+      final impliedOdds = hunch.userChoice ? 100.0 : 0.0;
+      totalGap += (impliedOdds - hunch.marketConsensus).abs();
+    }
+    return totalGap / _activeHunches.length;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -127,4 +162,34 @@ class HunchesScreen extends StatelessWidget {
       ],
     );
   }
+}
+
+// Data models
+class ActiveHunch {
+  final String question;
+  final String context;
+  final bool userChoice; // true = YES, false = NO
+  final int marketConsensus; // 0-100%
+  final String imageUrl;
+
+  const ActiveHunch({
+    required this.question,
+    required this.context,
+    required this.userChoice,
+    required this.marketConsensus,
+    required this.imageUrl,
+  });
+}
+
+enum ConvictionLevel {
+  aligned,   // 0-15% gap
+  moderate,  // 15-40% gap
+  strong,    // 40%+ gap
+}
+
+class GradientColors {
+  final Color start;
+  final Color end;
+
+  GradientColors({required this.start, required this.end});
 }

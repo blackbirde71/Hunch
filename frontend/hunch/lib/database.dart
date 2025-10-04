@@ -72,8 +72,9 @@ Map<String, dynamic> _processQuestion(Map<String, dynamic> question) {
   return question;
 }
 
+/// Fetches up to `limit` questions that the user has not seen and are not in `cache`.
 Future<List<Map<String, dynamic>>> getUnansweredQuestions(
-    int limit, List<int> inCache) async {
+    int limit, List<int> cache) async {
   if (limit == 0) return [];
 
   final user = Supabase.instance.client.auth.currentUser;
@@ -89,7 +90,7 @@ Future<List<Map<String, dynamic>>> getUnansweredQuestions(
       .eq('user_id', user.id);
 
   final answeredIds = answered.map<int>((r) => r['question_id'] as int).toList()
-    ..addAll(inCache);
+    ..addAll(cache);
 
   var query = supabase.from('questions').select();
   if (answeredIds.isNotEmpty) {

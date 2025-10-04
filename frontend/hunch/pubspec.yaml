@@ -12,6 +12,7 @@ dependencies:
   supabase_flutter: ^2.10.2
   hive: ^2.2.3
   hive_flutter: ^1.1.0
+  google_fonts: ^6.2.1
 
 dev_dependencies:
   flutter_test:
@@ -22,3 +23,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/hunch_logo.jpeg
+  fonts:
+    - family: HubotSans
+      fonts:
+        - asset: assets/fonts/HubotSans-Medium.ttf
