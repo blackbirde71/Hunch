@@ -284,7 +284,7 @@ func grabMarkets(client *genai.Client) ([]Market, error) {
 		mj := mj
 		eg.Go(func() error {
 			// Skip if question already exists for this market ID
-			if idNum, err := strconv.Atoi(mj.ID); err == nil && idNum <= 521000 {
+			if idNum, err := strconv.Atoi(mj.ID); err == nil && idNum <= 529310 {
 				return nil
 			}
 			outcomes, err := parseJSONEncodedStringSlice(mj.Outcomes)
