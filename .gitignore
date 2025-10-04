@@ -1,0 +1,8 @@
+.env
+.DS_Store
+**/bin/
+**/build/
+**/*.exe
+**/*.out
+**/*.test
+

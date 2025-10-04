@@ -1,0 +1,6 @@
+Generate an image to be used for a prediction market's profile. Do not include text. It should be like a social media post image. 
+I have included reference images for stylistic purposes. The image should be HIGHLY SPECIFIC and relevant to the content of the question. 
+
+QUESTION: {{MARKET_QUESTION}} 
+
+DESCRIPTION: {{MARKET_DESCRIPTION}}
