@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'globals.dart';
 import 'market.dart';
 import 'database.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 
 Future<void> onSwipe(SwipeAction action) async {
   // Persist what the user just swiped on
@@ -41,9 +42,8 @@ Future<void> onSwipe(SwipeAction action) async {
   }
 
   // Remove the current card from the cache
+  infoCache.removeAt(0);
   if (infoCache.length <= cacheSize / 2) {
-    infoCache.removeAt(0);
-  } else {
     // before fetching new questions, send most recent answers to supabase
     sendAnswers(answerList);
     answerList.clear();
@@ -54,10 +54,21 @@ Future<void> onSwipe(SwipeAction action) async {
     // if (questions.isNotEmpty) {
     //   infoCache.add(questions[0]);
     // }
-    final cacheQIDs = getCacheQIDs(infoCache);
-    final nextQs = await getUnansweredQuestions(cacheSize ~/ 2, cacheQIDs);
-    infoCache.addAll(nextQs);
+
+    // get the question ids of the pat ones
+    List<int> pastQIDS = getCacheQIDs(infoCache);
+
+    for (Answer a in answerList) {
+      pastQIDS.add(a.questionId);
+    }
+
+    print("yipee");
+    updateCache(pastQIDS);
   }
+}
+
+void updateCache(List<int> pastQIDS) async {
+  infoCache.addAll(await getUnansweredQuestions(cacheSize, pastQIDS));
 }
 
 List<int> getCacheQIDs(List<Map<String, dynamic>> infoCache) {
@@ -153,6 +164,7 @@ class _CardStackState extends State<CardStack> {
 }
 
 // Shared card content component - single source of truth for card presentation
+
 class CardContent extends StatelessWidget {
   final Map<String, dynamic> data;
 
@@ -193,9 +205,11 @@ class CardContent extends StatelessWidget {
             ),
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
             child: Center(
-              child: Text(
+              child: AutoSizeText(
                 (data['question'] ?? '') as String,
                 textAlign: TextAlign.center,
+                maxLines: 4, // Prevent overflow; adjust as needed
+                minFontSize: 16, // Don't shrink below this size
                 style: const TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.w700,
@@ -227,6 +241,8 @@ class CardContent extends StatelessWidget {
     );
   }
 }
+
+
 
 class SwipeableCard extends StatefulWidget {
   final Map<String, dynamic> data;
