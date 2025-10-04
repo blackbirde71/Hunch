@@ -7,14 +7,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'feed.dart';
 import 'hunches.dart';
 import 'market.dart';
+import 'globals.dart';
+import 'auth.dart';
 
-late List<int> questionIds;
-late List<Map<String, dynamic>> infoCache;
-final cacheSize = 2;
-
-void onSwipe(SwipeAction action) async {
-  
-}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +28,8 @@ Future<void> main() async {
   );
 
   questionIds = await getQuestionIds();
+
+  // TODO: need to remove the questionIDs we've already seen
   infoCache = await getQuestionsByIds(questionIds.sublist(0, cacheSize));
 
   final testMarket = Market(
@@ -42,10 +39,15 @@ Future<void> main() async {
     price: 0.2,
     action: SwipeAction.blank
   );
-  var marketsBox = await Hive.openBox<Market>('markets');
+
+  marketsBox = await Hive.openBox<Market>('markets');
+
+  // remember which questions we've seen
+  qIndex = marketsBox.get("qIndex") ?? cacheSize;
+
   marketsBox.put(testMarket.id, testMarket);
 
-  print(marketsBox.get(testMarket.id));
+  print(marketsBox.get(testMarket.id)?.question);
 
   runApp(const HunchApp());
 }
@@ -60,8 +62,31 @@ class HunchApp extends StatelessWidget {
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFFF5F5F5),
       ),
-      home: const MainScreen(),
+      home: const AuthGate(),
       debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+final disableAuth = false;
+
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<AuthState>(
+      stream: Supabase.instance.client.auth.onAuthStateChange,
+      builder: (context, snapshot) {
+        // Check if user is signed in
+        final session = snapshot.hasData ? snapshot.data!.session : null;
+
+        if (disableAuth || session != null) {
+          return const MainScreen();
+        } else {
+          return AuthScreen();
+        }
+      },
     );
   }
 }

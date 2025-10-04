@@ -7,6 +7,25 @@ import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+class Answer {
+  final int questionId;
+  final String answer; // 'yes' or 'no'
+  final int? timeSpentSeconds;
+
+  Answer({
+    required this.questionId,
+    required this.answer,
+    this.timeSpentSeconds,
+  });
+
+  Map<String, dynamic> toJson(String userId) => {
+        'user_id': userId,
+        'question_id': questionId,
+        'answer': answer,
+        'time_spent_seconds': timeSpentSeconds,
+      };
+}
+
 final supabase = Supabase.instance.client;
 
 /// Fetches all question IDs from the database.
@@ -43,4 +62,15 @@ Future<List<Map<String, dynamic>>> getQuestionsByIds(List<int> ids) async {
     }
     return question;
   }).toList();
+}
+
+Future<void> sendAnswers(List<Answer> answers) async {
+  if (answers.isEmpty) return;
+
+  final user = supabase.auth.currentUser;
+  if (user == null) return;
+
+  final data = answers.map((answer) => answer.toJson(user.id)).toList();
+
+  await supabase.from('user_interactions').insert(data);
 }
