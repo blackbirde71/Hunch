@@ -89,15 +89,17 @@ Future<List<Map<String, dynamic>>> getUnansweredQuestions(
       .select('question_id')
       .eq('user_id', user.id);
 
-  final answeredIds = answered.map<int>((r) => r['question_id'] as int).toList()
-    ..addAll(cache);
+  final answeredIds = [
+    ...answered.map<int>((r) => r['question_id'] as int),
+    ...cache
+  ];
 
-  var query = supabase.from('questions').select();
-  if (answeredIds.isNotEmpty) {
-    query = query.not('id', 'in', answeredIds);
-  }
+  final questions = await supabase
+      .from('questions')
+      .select()
+      .not('id', 'in', answeredIds)
+      .limit(limit);
 
-  final questions = await query.limit(limit);
   return questions.map(_processQuestion).toList();
 }
 
