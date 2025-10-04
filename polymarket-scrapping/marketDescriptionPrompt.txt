@@ -1,0 +1,4 @@
+Simplify the resolution criteria to be understandable for an average person. 
+Be extremely succient but sufficient.
+It should read naturally, like a caption to a X, Linkedin post.  
+Do not reference "the market", as this fact should be abstracted from the user. 
