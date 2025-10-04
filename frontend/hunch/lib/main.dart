@@ -1,5 +1,6 @@
 // main.dart
 import 'package:flutter/material.dart';
+import 'package:hunch/database.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'feed.dart';
 import 'hunches.dart';
@@ -10,8 +11,7 @@ Future<void> main() async {
   await Supabase.initialize(
     url: 'https://benwvphuubnrzdlhvjzu.supabase.co',
     // dont flame it is anon key
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlbnd2cGh1dWJucnpkbGh2anp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1ODI1NjgsImV4cCI6MjA3NTE1ODU2OH0.jt5SrMqC91RhYNAqP3m1Ut7f9pOrZF8niI892OkUBFI',
+    anonKey: 'sb_publishable_JiGhx5v95JaN977zMHHlRA_A2nn7wnT',
   );
 
   runApp(const HunchApp());
@@ -47,7 +47,116 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _selectedIndex == 0 ? const FeedScreen() : const HunchesScreen(),
+      body: Column(
+  children: [
+    Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.black, width: 3)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Streak
+              Expanded(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    border: Border(right: BorderSide(color: Colors.black, width: 3)),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'STREAK',
+                        style: TextStyle(
+                          fontFamily: 'Courier',
+                          fontSize: 8,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 1.5,
+                          color: Colors.black.withOpacity(0.4),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        '23',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          height: 1,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Brand
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                color: Colors.black,
+                child: const Center(
+                  child: Text(
+                    'Hunch',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      height: 1,
+                      letterSpacing: -0.8,
+                    ),
+                  ),
+                ),
+              ),
+              // Accuracy
+              Expanded(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    border: Border(left: BorderSide(color: Colors.black, width: 3)),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'ACCURACY',
+                        style: TextStyle(
+                          fontFamily: 'Courier',
+                          fontSize: 8,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 1.5,
+                          color: Colors.black.withOpacity(0.4),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        '68.4%',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          height: 1,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+    Expanded(
+      child: _selectedIndex == 0 ? const FeedScreen() : const HunchesScreen(),
+    ),
+  ],
+),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: Colors.black, width: 3)),
