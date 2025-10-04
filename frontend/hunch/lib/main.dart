@@ -53,24 +53,25 @@ Future<void> main() async {
 
   questionIds = await getQuestionIds();
 
-  // TODO: need to remove the questionIDs we've already seen
-  infoCache = await getQuestionsByIds(questionIds.sublist(0, cacheSize));
+  // infoCache = await getQuestionsByIds(questionIds.sublist(0, cacheSize));
+  infoCache = await getQuestionsByIds(cacheSize);
 
-  final testMarket = Market(
-      id: "111",
-      question: "HI?!",
-      description: "ajsdfnjksd,nfkshb",
-      price: 0.2,
-      action: SwipeAction.blank);
+  // final testMarket = Market(
+  //   id: "111",
+  //   question: "HI?!",
+  //   description: "ajsdfnjksd,nfkshb",
+  //   price: 0.2,
+  //   action: SwipeAction.blank
+  // );
 
   marketsBox = await Hive.openBox<Market>('markets');
 
   // remember which questions we've seen
-  qIndex = marketsBox.get("qIndex") ?? cacheSize;
+  // qIndex = marketsBox.get("qIndex") ?? cacheSize;
 
-  marketsBox.put(testMarket.id, testMarket);
+  // marketsBox.put(testMarket.id, testMarket);
 
-  print(marketsBox.get(testMarket.id)?.question);
+  // print(marketsBox.get(testMarket.id)?.question);
 
   runApp(const HunchApp());
 }
