@@ -111,6 +111,18 @@ func parsePriceStringsToFloats(priceStrings []string) ([]float64, error) {
 	return prices, nil
 }
 
+func questionExists(marketID string) (bool, error) {
+	data, _, err := supabaseClient.From("questions").Select("marketid", "", false).Eq("marketid", marketID).Limit(1, "").Execute()
+	if err != nil {
+		return false, err
+	}
+	var rows []map[string]any
+	if err := json.Unmarshal(data, &rows); err != nil {
+		return false, err
+	}
+	return len(rows) > 0, nil
+}
+
 func getWorkerLimit() int {
 	s := os.Getenv("MARKET_WORKERS")
 	if s == "" {
@@ -187,7 +199,7 @@ func grabMarkets(client *genai.Client) ([]Market, error) {
 	params := url.Values{}
 	params.Add("closed", "false")
 	params.Add("volume_num_min", "30000")
-	params.Add("limit", "200")
+	params.Add("limit", "350")
 	u.RawQuery = params.Encode()
 	req, _ := http.NewRequest("GET", u.String(), nil)
 
@@ -216,6 +228,15 @@ func grabMarkets(client *genai.Client) ([]Market, error) {
 	for _, mj := range marketsJSON {
 		mj := mj
 		eg.Go(func() error {
+			// Skip if question already exists for this market ID
+			exists, err := questionExists(mj.ID)
+			if err != nil {
+				fmt.Println(err)
+				return nil
+			}
+			if exists {
+				return nil
+			}
 			outcomes, err := parseJSONEncodedStringSlice(mj.Outcomes)
 			if err != nil {
 				fmt.Println(err)
