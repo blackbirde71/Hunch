@@ -32,6 +32,8 @@ class CardStack extends StatefulWidget {
 
 class _CardStackState extends State<CardStack> {
   int currentCard = 0;
+  bool _allComplete = false;
+
   final List<PredictionCard> cards = [
     PredictionCard(
       question: 'Trump wins Pennsylvania',
@@ -60,55 +62,33 @@ class _CardStackState extends State<CardStack> {
     ),
   ];
 
-  void _onCardSwiped() {
+   void _onCardSwiped() {
     setState(() {
       if (currentCard < cards.length - 1) {
         currentCard++;
+      } else {
+        // Last card was just swiped
+        _allComplete = true;
       }
     });
   }
 
-  @override
   Widget build(BuildContext context) {
-    if (currentCard >= cards.length) {
+    // Show completion state only AFTER final swipe
+    if (_allComplete) {
       return Center(
-        child: Container(
-          margin: const EdgeInsets.all(20),
-          padding: const EdgeInsets.all(56),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.black, width: 3),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black,
-                offset: Offset(8, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Complete',
-                style: TextStyle(
-                  fontSize: 56,
-                  fontWeight: FontWeight.w800,
-                  height: 1,
-                  letterSpacing: -1.5,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Check back tonight',
-                style: TextStyle(
-                  fontFamily: 'Courier',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 1,
-                  color: Colors.black.withOpacity(0.5),
-                ),
-              ),
-            ],
+        child: Padding(
+          padding: const EdgeInsets.all(40),
+          child: Text(
+            "You completed all hunches!",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w700,
+              height: 1.2,
+              letterSpacing: -0.5,
+              color: Colors.black.withOpacity(0.4),
+            ),
           ),
         ),
       );
@@ -116,7 +96,7 @@ class _CardStackState extends State<CardStack> {
 
     return Stack(
       children: [
-        // Next card peek - fully rendered with actual content
+        // Peek card - only show if there's a next card
         if (currentCard < cards.length - 1)
           Positioned.fill(
             child: Padding(
@@ -136,12 +116,13 @@ class _CardStackState extends State<CardStack> {
               ),
             ),
           ),
-        // Active swipeable card
+        // Active card - always swipeable when not complete
         Center(
           child: SwipeableCard(
             card: cards[currentCard],
             onSwiped: _onCardSwiped,
             showInstructions: currentCard == 0,
+            isLastCard: currentCard == cards.length - 1, // Pass context to card
           ),
         ),
       ],
@@ -224,12 +205,14 @@ class SwipeableCard extends StatefulWidget {
   final PredictionCard card;
   final VoidCallback onSwiped;
   final bool showInstructions;
+  final bool isLastCard; // New parameter
 
   const SwipeableCard({
     super.key,
     required this.card,
     required this.onSwiped,
     this.showInstructions = false,
+    this.isLastCard = false, // Default to false
   });
 
   @override
