@@ -59,7 +59,6 @@ class HunchApp extends StatelessWidget {
       title: 'Hunch',
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFFF5F5F5),
-        fontFamily: 'System',
       ),
       home: const MainScreen(),
       debugShowCheckedModeBanner: false,
@@ -74,138 +73,94 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+
+class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
+  late AnimationController _breathingController;
+  late Animation<double> _translateYAnimation;
+  late Animation<double> _scaleYAnimation;
+  late Animation<double> _scaleXAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _breathingController = AnimationController(
+      duration: const Duration(milliseconds: 1600),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _translateYAnimation = Tween<double>(
+      begin: -3.0,
+      end: 3.0,
+    ).animate(CurvedAnimation(
+      parent: _breathingController,
+      curve: Curves.easeInOutCubic,
+    ));
+
+    _scaleYAnimation = Tween<double>(
+      begin: 1.02,
+      end: 0.96,
+    ).animate(CurvedAnimation(
+      parent: _breathingController,
+      curve: Curves.easeInOutCubic,
+    ));
+
+    _scaleXAnimation = Tween<double>(
+      begin: 0.99,
+      end: 1.03,
+    ).animate(CurvedAnimation(
+      parent: _breathingController,
+      curve: Curves.easeInOutCubic,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _breathingController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(bottom: BorderSide(color: Colors.black, width: 3)),
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Streak
-                    Expanded(
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          border: Border(
-                              right: BorderSide(color: Colors.black, width: 3)),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'STREAK',
-                              style: TextStyle(
-                                fontFamily: 'Courier',
-                                fontSize: 8,
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 1.5,
-                                color: Colors.black.withOpacity(0.4),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            const Text(
-                              '23',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w700,
-                                height: 1,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    // Brand
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      color: Colors.black,
-                      child: const Center(
-                        child: Text(
-                          'Hunch',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            height: 1,
-                            letterSpacing: -0.8,
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Accuracy
-                    Expanded(
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          border: Border(
-                              left: BorderSide(color: Colors.black, width: 3)),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'ACCURACY',
-                              style: TextStyle(
-                                fontFamily: 'Courier',
-                                fontSize: 8,
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 1.5,
-                                color: Colors.black.withOpacity(0.4),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            const Text(
-                              '68.4%',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w700,
-                                height: 1,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        toolbarHeight: 70,
+        title: AnimatedBuilder(
+          animation: _breathingController,
+          builder: (context, child) {
+            return Transform.translate(
+              offset: Offset(0, _translateYAnimation.value),
+              child: Transform.scale(
+                scaleY: _scaleYAnimation.value,
+                scaleX: _scaleXAnimation.value,
+                filterQuality: FilterQuality.medium,
+                child: child,
               ),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            // decoration: BoxDecoration(
+            //   color: Colors.black,
+            //   border: Border.all(color: Colors.black, width: 3),
+            // ),
+            child: Image.asset(
+              'assets/hunch_logo.jpeg',
+              width: 150,
+              height: 40,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.medium,
             ),
           ),
-          Expanded(
-            child: _selectedIndex == 0
-                ? const FeedScreen()
-                : const HunchesScreen(),
-          ),
-        ],
+        ),
+        shape: const Border(
+          bottom: BorderSide(color: Colors.black, width: 3),
+        ),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.orange,
-        child: Icon(Icons.bug_report),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => TestImageScreen()),
-          );
-        },
-      ),
+      body: _selectedIndex == 0 ? const FeedScreen() : const HunchesScreen(),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: Colors.black, width: 3)),
@@ -243,3 +198,5 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 }
+
+
