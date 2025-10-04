@@ -7,8 +7,12 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
+	"strings"
+	"sync"
 
+	"github.com/joho/godotenv"
 	"google.golang.org/genai"
 )
 
@@ -34,11 +38,8 @@ type Market struct {
 	Events        []Event   `json:"events"`
 	Outcomes      []string  `json:"outcomes"`
 	OutcomePrices []float64 `json:"outcomePrices"`
+	Image         string    `json:"image"`
 }
-
-const (
-	geminiAPIKey = "AIzaSyB011HqN457B96XZMPMYKp23t9WwAHtDWw"
-)
 
 func parseJSONEncodedStringSlice(s string) ([]string, error) {
 	var arr []string
@@ -60,6 +61,39 @@ func parsePriceStringsToFloats(priceStrings []string) ([]float64, error) {
 	return prices, nil
 }
 
+var baseImagePrompt string
+var basePromptOnce sync.Once
+
+func getBaseImagePrompt() (string, error) {
+	var err error
+	basePromptOnce.Do(func() {
+		data, readErr := os.ReadFile("/Users/benliu/dev/hackharvard/polymarket-scrapping/marketImagePrompt.txt")
+		if readErr != nil {
+			err = readErr
+			return
+		}
+		baseImagePrompt = string(data)
+	})
+	return baseImagePrompt, err
+}
+
+func buildMarketImagePrompt(template string, market Market) string {
+	prompt := strings.ReplaceAll(template, "{{MARKET_QUESTION}}", market.Question)
+	prompt = strings.ReplaceAll(prompt, "{{MARKET_DESCRIPTION}}", market.Description)
+	return prompt
+}
+
+func generateMarketImage(client *genai.Client, market Market) (string, error) {
+	_, _ = client, market
+	// Build the prompt by pulling the template once and injecting market fields
+	template, err := getBaseImagePrompt()
+	if err != nil {
+		return "", err
+	}
+	prompt := buildMarketImagePrompt(template, market)
+	// For now, return the built prompt. Hook up model generation separately.
+	return prompt, nil
+}
 func grabMarkets(client *genai.Client) ([]Market, error) {
 	baseURL := "https://gamma-api.polymarket.com/markets"
 	u, _ := url.Parse(baseURL)
@@ -115,15 +149,23 @@ func grabMarkets(client *genai.Client) ([]Market, error) {
 			Outcomes:      outcomes,
 			OutcomePrices: prices,
 		}
+		fmt.Println(market.Question + "\n")
 		markets = append(markets, market)
 	}
 	return markets, nil
 }
 
 func main() {
-
+	_ = godotenv.Load()
+	apiKey := os.Getenv("GEMINI_API_KEY")
+	if apiKey == "" {
+		fmt.Println("GEMINI_API_KEY not set. Create a .env with GEMINI_API_KEY or export it.")
+		return
+	}
+	fmt.Println("API Key loaded successfully")
+	fmt.Println(apiKey)
 	client, err := genai.NewClient(context.Background(), &genai.ClientConfig{
-		APIKey:  geminiAPIKey,
+		APIKey:  apiKey,
 		Backend: genai.BackendGeminiAPI,
 	})
 	if err != nil {
