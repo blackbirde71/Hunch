@@ -40,7 +40,8 @@ jobs:
         run: |
           REPO_NAME="${{ github.event.repository.name }}"
           OWNER="${{ github.repository_owner }}"
-          if [[ "$REPO_NAME" == "${OWNER}.github.io" ]]; then
+          # Use root base href if deploying to user/organization site or custom domain (CNAME present)
+          if [[ -f web/CNAME ]] || [[ "$REPO_NAME" == "${OWNER}.github.io" ]]; then
             echo "BASE_HREF=/" >> $GITHUB_ENV
           else
             echo "BASE_HREF=/${REPO_NAME}/" >> $GITHUB_ENV
@@ -57,6 +58,10 @@ jobs:
 
       - name: Build web
         run: flutter build web --release $WEB_RENDERER_FLAG $BASE_HREF_FLAG
+
+      - name: Include CNAME in build (for custom domain)
+        if: ${{ hashFiles('frontend/hunch/web/CNAME') != '' }}
+        run: cp web/CNAME build/web/CNAME
 
       - name: Add .nojekyll
         run: touch build/web/.nojekyll
