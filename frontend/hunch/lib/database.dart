@@ -55,16 +55,10 @@ Future<List<Map<String, dynamic>>> getQuestionsByIds(List<int> ids) async {
   print(ids);
   final response =
       await supabase.from('questions').select().inFilter('id', ids);
-
+  // print(response);
   // Convert hex images to bytes
   print("done");
-  return response.map((question) {
-    if (question['picture_base64'] != null) {
-      question['picture_data'] =
-          base64Decode(question['picture_base64'] as String);
-    }
-    return question;
-  }).toList();
+  return response;
 }
 
 Map<String, dynamic> _processQuestion(Map<String, dynamic> question) {
@@ -115,7 +109,7 @@ Future<List<Map<String, dynamic>>> getUnansweredQuestions(
     }
   }
 
-  return await getQuestionsByIds(unansweredIds);
+  return await getQuestionsByIds(selectedIds);
 }
 
 /// Fetches up to `limit` questions that the user has not seen and are not in `cache`.
@@ -176,9 +170,7 @@ Future<List<Map<String, dynamic>>> getStatsDB(List<String> ids) async {
   final intIds = ids.map((id) => int.parse(id)).toList();
 
   // get polymarket and hackharvard yes, no count for a list of question IDs
-  final stats = await supabase
-    .from('questions')
-    .select('''
+  final stats = await supabase.from('questions').select('''
     yes_price,
     yes_count,
     no_count''').inFilter('id', intIds);

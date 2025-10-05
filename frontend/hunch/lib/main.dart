@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:hunch/database.dart';
-import 'package:hunch/test_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'feed.dart';
 import 'hunches.dart';
@@ -25,8 +24,6 @@ Future<void> main() async {
     // dont flame it is anon key
     anonKey: 'sb_publishable_JiGhx5v95JaN977zMHHlRA_A2nn7wnT',
   );
-
-  // TODO:: these need to be moved to after sign in
 
   // final testMarket = Market(
   //   id: "111",

@@ -28,12 +28,12 @@ Future<List<Stats>> getStats() async {
     final List<int> intKeys = (rawKeys as List)
         .map<int>((k) => k is int ? k : int.parse(k.toString()))
         .toList();
-    print(stringKeys);
+    // print(stringKeys);
 
     // get the statistics for each market
     final stats = await getStatsDB(stringKeys);
 
-    print(stats);
+    // print(stats);
 
     // return a list of id, polymarket prob, hackharvard prob for each market the user has swiped on
     List<Stats> ret = [];

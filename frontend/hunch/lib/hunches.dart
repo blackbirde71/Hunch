@@ -1,5 +1,6 @@
-// hunches.dart
 import 'package:flutter/material.dart';
+import 'package:hunch/globals.dart';
+import 'package:hunch/market.dart';
 import 'getaggstats.dart';
 
 class HunchesScreen extends StatefulWidget {
@@ -9,209 +10,234 @@ class HunchesScreen extends StatefulWidget {
   State<HunchesScreen> createState() => _HunchesScreenState();
 }
 
+
 class _HunchesScreenState extends State<HunchesScreen> {
-  // Mock data - replace with actual state management
-  final List<ActiveHunch> _activeHunches = const [
-    ActiveHunch(
-      question: 'Trump wins Pennsylvania',
-      context: 'Nov 5 → Nov 8',
-      userChoice: true,
-      marketConsensus: 67,
-      imageUrl: 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=800&q=80',
-    ),
-    ActiveHunch(
-      question: 'Bitcoin closes above \$70k this week',
-      context: 'Sunday 11:59pm EST',
-      userChoice: false,
-      marketConsensus: 43,
-      imageUrl: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?w=800&q=80',
-    ),
-    ActiveHunch(
-      question: 'OpenAI announces GPT-5 before December',
-      context: 'Official announcement only',
-      userChoice: true,
-      marketConsensus: 28,
-      imageUrl: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80',
-    ),
-  ];
+  late List<ActiveHunch> _activeHunches;
+  bool _isLoading = true;
+
+  Future<List<Stats>> _runGetStatsOnce() async {
+    final List<Stats> stats = await getStats();
+    return stats;
+    // try {
+      
+    //   // print('getStats() returned: ' + stats.toString());
+    // } catch (e, st) {
+    //   // print('getStats() failed: ' + e.toString());
+    //   // print(st.toString());
+    // }
+  }
+
+  Future<void> _createActiveHunchList() async {
+    List<Stats> stats = await _runGetStatsOnce();
+    List<ActiveHunch> list = [];
+    for (final s in stats) {
+      // print('dbug');
+      // print(s.questionId);
+      // print(marketsBox.keys);
+      Market m = marketsBox.get(s.questionId.toString());
+      ActiveHunch ah = ActiveHunch(
+        question: m.question,
+        marketConsensus: (s.polymarketProb * 100.0).floor(),
+        hackathonConsensus: (s.hackHarvardProb! * 100.0).floor(),
+        userBet: m.action
+      );
+      list.add(ah);
+    }
+    print("list");
+    print(list);
+    setState(() {
+      _activeHunches = list;
+      _isLoading = false;
+    });
+  }
 
   @override
   void initState() {
     super.initState();
-    _runGetStatsOnce();
-  }
-
-  Future<void> _runGetStatsOnce() async {
-    try {
-      final stats = await getStats();
-      print('getStats() returned: ' + stats.toString());
-    } catch (e, st) {
-      print('getStats() failed: ' + e.toString());
-      print(st.toString());
-    }
-  }
-
-  double _calculateAverageGap() {
-    if (_activeHunches.isEmpty) return 0;
-    double totalGap = 0;
-    for (var hunch in _activeHunches) {
-      final impliedOdds = hunch.userChoice ? 100.0 : 0.0;
-      totalGap += (impliedOdds - hunch.marketConsensus).abs();
-    }
-    return totalGap / _activeHunches.length;
+    _createActiveHunchList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final avgGap = _calculateAverageGap();
 
-    return Column(
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    } else {
+      final total = _activeHunches.length;
+    final avgPolymarketDiff = _activeHunches
+            .map((h) => (100 -
+                (h.marketConsensus -
+                        (h.userBet == SwipeAction.yes ? 100 : 0))
+                    .abs()))
+            .reduce((a, b) => a + b) /
+        total;
+    final avgHackHarvardDiff = _activeHunches
+            .map((h) => (100 -
+                (h.hackathonConsensus -
+                        (h.userBet == SwipeAction.yes ? 100 : 0))
+                    .abs()))
+            .reduce((a, b) => a + b) /
+        total;
+    return 
+    
+    
+    ListView(
+      padding: const EdgeInsets.all(20),
       children: [
-        // Stats bar
+        // 🔲 Unified Header Summary
         Container(
+          height: 90,
           decoration: const BoxDecoration(
             color: Colors.white,
-            border: Border(bottom: BorderSide(color: Colors.black, width: 3)),
+            border: Border.fromBorderSide(BorderSide(color: Colors.black, width: 3)),
+            boxShadow: [
+              BoxShadow(color: Colors.black, offset: Offset(3, 3)),
+            ],
           ),
-          child: SafeArea(
-            bottom: false,
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Total hunches
-                  Expanded(
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        border: Border(right: BorderSide(color: Colors.black, width: 3)),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'ACTIVE',
-                            style: TextStyle(
-                              fontFamily: 'Courier',
-                              fontSize: 8,
-                              fontWeight: FontWeight.w500,
-                              letterSpacing: 1.5,
-                              color: Colors.black.withOpacity(0.4),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${_activeHunches.length}',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                              height: 1,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Average gap
-                  Expanded(
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        border: Border(right: BorderSide(color: Colors.black, width: 3)),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'AVG GAP',
-                            style: TextStyle(
-                              fontFamily: 'Courier',
-                              fontSize: 8,
-                              fontWeight: FontWeight.w500,
-                              letterSpacing: 1.5,
-                              color: Colors.black.withOpacity(0.4),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '±${avgGap.toStringAsFixed(0)}%',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                              height: 1,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Pending resolution
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'PENDING',
-                            style: TextStyle(
-                              fontFamily: 'Courier',
-                              fontSize: 8,
-                              fontWeight: FontWeight.w500,
-                              letterSpacing: 1.5,
-                              color: Colors.black.withOpacity(0.4),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${_activeHunches.length}',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                              height: 1,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+          child: Row(
+            children: [
+              _SummaryCell(
+                title: 'Number of hunches made:',
+                value: '$total',
+                showRightBorder: true,
               ),
-            ),
+              _SummaryCell(
+                title: 'How similar to Polymarket:',
+                value: '${avgPolymarketDiff.toStringAsFixed(0)}%',
+                showRightBorder: true,
+              ),
+              _SummaryCell(
+                title: 'How similar to HackHarvard:',
+                value: '${avgHackHarvardDiff.toStringAsFixed(0)}%',
+                showRightBorder: false,
+              ),
+            ],
           ),
         ),
-        // Card list
-        Expanded(
-          child: _activeHunches.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(40),
-                    child: Text(
-                      'No active hunches',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black.withOpacity(0.3),
-                      ),
-                    ),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(20),
-                  itemCount: _activeHunches.length,
-                  itemBuilder: (context, index) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 20),
-                      child: HunchCard(hunch: _activeHunches[index]),
-                    );
-                  },
+
+        const SizedBox(height: 20),
+        const _Legend(),
+        const SizedBox(height: 20),
+
+        for (final h in _activeHunches)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 20),
+            child: HunchCard(hunch: h),
+          ),
+      ],
+    );
+    
+    
+    }
+  }
+}
+
+
+class _SummaryCell extends StatelessWidget {
+  final String title;
+  final String value;
+  final bool showRightBorder;
+  const _SummaryCell({
+    required this.title,
+    required this.value,
+    required this.showRightBorder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            right: showRightBorder
+                ? const BorderSide(color: Colors.black, width: 3)
+                : BorderSide.none,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Stack(
+          children: [
+            // Title (top-left)
+            Align(
+              alignment: Alignment.topLeft,
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontFamily: 'Courier',
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.1,
+                  color: Colors.black,
+                  height: 1.2,
                 ),
+              ),
+            ),
+            // Value (bottom-center)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Text(
+                value,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black,
+                  height: 1,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Legend extends StatelessWidget {
+  const _Legend({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _LegendItem(color: Color(0xFF2563EB), label: 'Polymarket average'),
+          SizedBox(height: 10),
+          _LegendItem(color: Color(0xFFA51C30), label: 'HackHarvard average'),
+        ],
+      ),
+    );
+  }
+}
+
+class _LegendItem extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _LegendItem({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(
+            color: color,
+            border: Border.all(color: Colors.black, width: 2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'Courier',
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: Colors.black,
+          ),
         ),
       ],
     );
@@ -220,212 +246,67 @@ class _HunchesScreenState extends State<HunchesScreen> {
 
 class HunchCard extends StatelessWidget {
   final ActiveHunch hunch;
-
   const HunchCard({super.key, required this.hunch});
-
-  ConvictionLevel _calculateConviction() {
-    final impliedOdds = hunch.userChoice ? 100.0 : 0.0;
-    final gap = (impliedOdds - hunch.marketConsensus).abs();
-    
-    if (gap <= 15) return ConvictionLevel.aligned;
-    if (gap <= 40) return ConvictionLevel.moderate;
-    return ConvictionLevel.strong;
-  }
-
-  GradientColors _getGradientColors(ConvictionLevel level) {
-    switch (level) {
-      case ConvictionLevel.aligned:
-        return GradientColors(
-          start: const Color(0xFF64748B), // slate
-          end: const Color(0xFF94A3B8),   // slate-light
-        );
-      case ConvictionLevel.moderate:
-        return GradientColors(
-          start: const Color(0xFFF59E0B), // amber
-          end: const Color(0xFFFB923C),   // orange
-        );
-      case ConvictionLevel.strong:
-        return GradientColors(
-          start: const Color(0xFFEC4899), // pink
-          end: const Color(0xFF8B5CF6),   // violet
-        );
-    }
-  }
-
-  String _getConvictionLabel(ConvictionLevel level) {
-    switch (level) {
-      case ConvictionLevel.aligned:
-        return 'Consensus aligned';
-      case ConvictionLevel.moderate:
-        return 'Moderate divergence';
-      case ConvictionLevel.strong:
-        return 'Strong conviction';
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    final conviction = _calculateConviction();
-    final gradientColors = _getGradientColors(conviction);
-    final impliedOdds = hunch.userChoice ? 100.0 : 0.0;
-    final edge = impliedOdds - hunch.marketConsensus;
+    final color = switch (hunch.userBet) {
+      SwipeAction.yes => const Color(0xFF22C55E),
+      SwipeAction.no => const Color(0xFFEF4444),
+      _ => Colors.grey,
+    };
+    final label = switch (hunch.userBet) {
+      SwipeAction.yes => 'YES',
+      SwipeAction.no => 'NO',
+      _ => '-',
+    };
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: Colors.black, width: 3),
         boxShadow: const [
-          BoxShadow(
-            color: Colors.black,
-            offset: Offset(6, 6),
-          ),
+          BoxShadow(color: Colors.black, offset: Offset(4, 4)),
         ],
       ),
+      padding: const EdgeInsets.all(20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Gradient header with user choice
-          Container(
-            height: 80,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [gradientColors.start, gradientColors.end],
-              ),
-              border: const Border(
-                bottom: BorderSide(color: Colors.black, width: 3),
-              ),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // User choice
-                Text(
-                  hunch.userChoice ? 'YES' : 'NO',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w800,
-                    height: 1,
-                    letterSpacing: -0.5,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black26,
-                        offset: Offset(2, 2),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                ),
-                // Edge indicator
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: Text(
-                    '${edge >= 0 ? '+' : ''}${edge.toStringAsFixed(0)}%',
-                    style: const TextStyle(
-                      fontFamily: 'Courier',
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ],
+          Text(
+            hunch.question,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+              height: 1.2,
             ),
           ),
-          // Question section
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 6),
+          RichText(
+            text: TextSpan(
+              text: 'You predicted: ',
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
               children: [
-                Text(
-                  hunch.question,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    height: 1.2,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  hunch.context,
+                TextSpan(
+                  text: label,
                   style: TextStyle(
-                    fontFamily: 'Courier',
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.3,
-                    color: Colors.black.withOpacity(0.5),
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
                   ),
                 ),
               ],
             ),
           ),
-          // Market data section
-          Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFFF5F5F5),
-              border: Border(
-                top: BorderSide(color: Colors.black, width: 3),
-              ),
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Market consensus
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'MARKET',
-                      style: TextStyle(
-                        fontFamily: 'Courier',
-                        fontSize: 9,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 1.2,
-                        color: Colors.black.withOpacity(0.4),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${hunch.marketConsensus}%',
-                      style: const TextStyle(
-                        fontFamily: 'Courier',
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                  ],
-                ),
-                // Conviction label
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black, width: 2),
-                  ),
-                  child: Text(
-                    _getConvictionLabel(conviction),
-                    style: const TextStyle(
-                      fontFamily: 'Courier',
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          const SizedBox(height: 10),
+          ConsensusBar(
+            market: hunch.marketConsensus,
+            hackathon: hunch.hackathonConsensus,
           ),
         ],
       ),
@@ -433,32 +314,113 @@ class HunchCard extends StatelessWidget {
   }
 }
 
-// Data models
+class ConsensusBar extends StatelessWidget {
+  final int market;
+  final int hackathon;
+  const ConsensusBar({
+    super.key,
+    required this.market,
+    required this.hackathon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const border = 3.0;
+    const barHeight = 25.0;
+    const tickWidth = 3.0;
+    const crimson = Color(0xFFA51C30);
+    const blue = Color(0xFF2563EB);
+    const labelSpacing = 12.0;
+
+    return LayoutBuilder(builder: (context, c) {
+      final width = c.maxWidth - border * 2;
+      double px(double v) =>
+          border + (v.clamp(0, 100) / 100) * (width - tickWidth);
+
+      return SizedBox(
+        height: barHeight + 2 * (labelSpacing + 14),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Main bar
+            Positioned(
+              top: labelSpacing + 14,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: barHeight,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black, width: border),
+                ),
+              ),
+            ),
+
+            // HackHarvard tick
+            Positioned(
+              left: px(hackathon.toDouble()),
+              top: labelSpacing + 14 + border,
+              height: barHeight - border * 2,
+              child: Container(width: tickWidth, color: crimson),
+            ),
+
+            // HackHarvard percentage (below bar)
+            Positioned(
+              left: (px(hackathon.toDouble()) - 10)
+                  .clamp(border, c.maxWidth - border - 26),
+              bottom: 0,
+              child: Text(
+                '${hackathon.toStringAsFixed(0)}%',
+                style: const TextStyle(
+                  fontFamily: 'Courier',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: crimson,
+                ),
+              ),
+            ),
+
+            // Polymarket percentage (above bar, aligned with tick center)
+            Positioned(
+              left: (px(market.toDouble()) - 10)
+                  .clamp(border, c.maxWidth - border - 26),
+              top: labelSpacing - 6, // adjust to vertically center with tick
+              child: Text(
+                '${market.toStringAsFixed(0)}%',
+                style: const TextStyle(
+                  fontFamily: 'Courier',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: blue,
+                ),
+              ),
+            ),
+
+            // Polymarket tick
+            Positioned(
+              left: px(market.toDouble()),
+              top: labelSpacing + 14 + border,
+              height: barHeight - border * 2,
+              child: Container(width: tickWidth, color: blue),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+/// ---------- DATA ----------
 class ActiveHunch {
   final String question;
-  final String context;
-  final bool userChoice; // true = YES, false = NO
-  final int marketConsensus; // 0-100%
-  final String imageUrl;
-
+  final int marketConsensus;
+  final int hackathonConsensus;
+  final SwipeAction userBet;
   const ActiveHunch({
     required this.question,
-    required this.context,
-    required this.userChoice,
     required this.marketConsensus,
-    required this.imageUrl,
+    required this.hackathonConsensus,
+    required this.userBet,
   });
 }
 
-enum ConvictionLevel {
-  aligned,   // 0-15% gap
-  moderate,  // 15-40% gap
-  strong,    // 40%+ gap
-}
-
-class GradientColors {
-  final Color start;
-  final Color end;
-
-  GradientColors({required this.start, required this.end});
-}
