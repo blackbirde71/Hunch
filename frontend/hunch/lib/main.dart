@@ -188,7 +188,16 @@ class AuthGate extends StatelessWidget {
 
         if (disableAuth || session != null) {
           // Initialize data when user signs in
-          _initializeUserData();
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Swipe left or right according to your hunch!"),
+                duration: Duration(seconds: 3),
+              ),
+            );
+
+            _initializeUserData();
+          });
           return const MainScreen();
         } else {
           return AuthScreen();
