@@ -1,5 +1,6 @@
 // feed.dart
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 import 'dart:math' as math;
 import 'globals.dart';
 import 'market.dart';
@@ -105,7 +106,10 @@ class _CardStackState extends State<CardStack> {
                         ),
                       ],
                     ),
-                    child: CardContent(data: infoCache[1]),
+                    child: CardContent(
+                      data: infoCache[1],
+                      isActive: false,
+                    ),
                   ),
                 ),
               ),
@@ -126,30 +130,170 @@ class _CardStackState extends State<CardStack> {
 
 // Shared card content component - single source of truth for card presentation
 
-class CardContent extends StatelessWidget {
+class CardContent extends StatefulWidget {
   final Map<String, dynamic> data;
+  final bool isActive;
 
-  const CardContent({super.key, required this.data});
+  const CardContent({super.key, required this.data, this.isActive = false});
+
+  @override
+  State<CardContent> createState() => _CardContentState();
+}
+
+class _CardContentState extends State<CardContent> {
+  VideoPlayerController? _controller;
+  bool _isInitialized = false;
+  bool _isInitializing = false;
+  String? _error;
+
+  @override
+  void initState() {
+    print('CardContent initState called');
+    print('Data in initState: ${widget.data}');
+    super.initState();
+    _initVideo();
+  }
+
+  @override
+  void didUpdateWidget(covariant CardContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final oldUrl = oldWidget.data['video_url'] as String?;
+    final newUrl = widget.data['video_url'] as String?;
+
+    // Reinitialize video if the URL changed
+    if (oldUrl != newUrl) {
+      _controller?.dispose();
+      _controller = null;
+      _isInitialized = false;
+      _error = null;
+      _initVideo();
+    }
+
+    if (oldWidget.isActive != widget.isActive) {
+      _updatePlaybackState();
+    }
+  }
+
+  void _initVideo() {
+    final videoUrl = widget.data['video_url'] as String?;
+
+    // Clean up old controller if the video changed
+    if (_controller != null &&
+        _controller!.dataSource != videoUrl &&
+        videoUrl != null &&
+        videoUrl.isNotEmpty) {
+      _controller!.dispose();
+      _controller = null;
+      _isInitialized = false;
+    }
+
+    // Skip if no valid URL or already initializing
+    if (_isInitializing || videoUrl == null || videoUrl.isEmpty) return;
+
+    _isInitializing = true;
+
+    final controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
+    controller.initialize().then((_) {
+      if (!mounted) return;
+      setState(() {
+        _controller = controller;
+        _isInitialized = true;
+        _isInitializing = false;
+        _error = null;
+      });
+      controller.setLooping(true);
+      if (widget.isActive) {
+        controller.play();
+      }
+    }).catchError((error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error.toString();
+        _isInitializing = false;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  void _updatePlaybackState() {
+    if (_controller == null) return;
+    if (widget.isActive) {
+      _controller!.play();
+    } else {
+      _controller!.pause();
+    }
+  }
+
+  Widget _buildMedia() {
+    final videoUrl = widget.data['video_url'] as String?;
+    final imageUrl = widget.data['image_url'] as String?;
+
+    // Always attempt to init if we have a valid video URL
+    if (videoUrl != null && videoUrl.isNotEmpty) {
+      if ((_controller == null || !_isInitialized) && _error == null) {
+        _initVideo();
+      }
+
+      if (_error != null) {
+        // Fallback to image if video failed
+        if (imageUrl != null && imageUrl.isNotEmpty) {
+          return Image.network(imageUrl,
+              fit: BoxFit.cover, width: double.infinity);
+        }
+        return const Center(
+          child:
+              Text('Video failed to load', style: TextStyle(color: Colors.red)),
+        );
+      }
+
+      if (_isInitialized && _controller != null) {
+        return ClipRRect(
+          borderRadius:
+              BorderRadius.circular(0), // adjust if your card has rounding
+          child: SizedBox.expand(
+            child: FittedBox(
+              fit: BoxFit.cover, // makes it behave like the image
+              clipBehavior: Clip.hardEdge,
+              child: SizedBox(
+                width: _controller!.value.size.width,
+                height: _controller!.value.size.height,
+                child: VideoPlayer(_controller!),
+              ),
+            ),
+          ),
+        );
+      }
+
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Fall back to image if no video
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return Image.network(imageUrl, fit: BoxFit.cover, width: double.infinity);
+    }
+
+    // Default placeholder
+    return Container(color: const Color(0xFFE5E5E5));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Image
+        // Image or Video
         Expanded(
           flex: 5,
           child: Container(
             decoration: const BoxDecoration(
               border: Border(bottom: BorderSide(color: Colors.black, width: 3)),
             ),
-            child: (data['image_url'] != null &&
-                    (data['image_url'] as String).isNotEmpty)
-                ? Image.network(
-                    data['image_url'] as String,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                  )
-                : Container(color: const Color(0xFFE5E5E5)),
+            child: _buildMedia(),
           ),
         ),
         // Question
@@ -162,10 +306,10 @@ class CardContent extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
             child: Center(
               child: AutoSizeText(
-                (data['question'] ?? '') as String,
+                (widget.data['question'] ?? '') as String,
                 textAlign: TextAlign.center,
-                maxLines: 4, // Prevent overflow; adjust as needed
-                minFontSize: 16, // Don't shrink below this size
+                maxLines: 4,
+                minFontSize: 16,
                 style: const TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.w700,
@@ -182,7 +326,7 @@ class CardContent extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Center(
             child: MarkdownBody(
-              data: (data['description'] ?? '') as String,
+              data: (widget.data['description'] ?? '') as String,
               selectable: false,
               softLineBreak: true,
               styleSheet: MarkdownStyleSheet(
@@ -395,7 +539,10 @@ class _SwipeableCardState extends State<SwipeableCard> {
                             ),
                           ],
                         ),
-                        child: CardContent(data: widget.data),
+                        child: CardContent(
+                          data: widget.data,
+                          isActive: true,
+                        ),
                       ),
                       // Yes/No overlays - centered on the card itself
                       if (_dragX < -40)
