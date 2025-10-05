@@ -14,6 +14,7 @@ class HunchesScreen extends StatefulWidget {
 class _HunchesScreenState extends State<HunchesScreen> {
   late List<ActiveHunch> _activeHunches;
   bool _isLoading = true;
+  
 
   Future<List<Stats>> _runGetStatsOnce() async {
     final List<Stats> stats = await getStats();
