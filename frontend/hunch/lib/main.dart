@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:hunch/database.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:video_player/video_player.dart';
 import 'feed.dart';
 import 'hunches.dart';
 import 'market.dart';
@@ -15,8 +16,6 @@ Future<void> main() async {
   await Hive.initFlutter();
   Hive.registerAdapter(MarketAdapter());
   Hive.registerAdapter(SwipeActionAdapter());
-
-  await Hive.openBox<Market>('markets');
 
   // db init
   await Supabase.initialize(
@@ -43,6 +42,114 @@ Future<void> main() async {
   // print(marketsBox.get(testMarket.id)?.question);
 
   runApp(const HunchApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Video Test',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
+      ),
+      home: const VideoTestScreen(),
+    );
+  }
+}
+
+class VideoTestScreen extends StatefulWidget {
+  const VideoTestScreen({super.key});
+
+  @override
+  State<VideoTestScreen> createState() => _VideoTestScreenState();
+}
+
+class _VideoTestScreenState extends State<VideoTestScreen> {
+  late VideoPlayerController _controller;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Test video URL
+    _controller = VideoPlayerController.networkUrl(
+      Uri.parse(
+          'https://video.twimg.com/ext_tw_video/1907955343583277056/pu/vid/avc1/480x270/RlarrzFH6Y0-vZub.mp4?tag=12'),
+    )..initialize().then((_) {
+        setState(() {
+          _isInitialized = true;
+        });
+        _controller.play();
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Video Player Test'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      ),
+      body: Center(
+        child: _isInitialized
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AspectRatio(
+                    aspectRatio: _controller.value.aspectRatio,
+                    child: VideoPlayer(_controller),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          _controller.value.isPlaying
+                              ? Icons.pause
+                              : Icons.play_arrow,
+                        ),
+                        iconSize: 40,
+                        onPressed: () {
+                          setState(() {
+                            _controller.value.isPlaying
+                                ? _controller.pause()
+                                : _controller.play();
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 20),
+                      IconButton(
+                        icon: const Icon(Icons.replay),
+                        iconSize: 40,
+                        onPressed: () {
+                          _controller.seekTo(Duration.zero);
+                          _controller.play();
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    _controller.value.isPlaying ? 'Playing' : 'Paused',
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                ],
+              )
+            : const CircularProgressIndicator(),
+      ),
+    );
+  }
 }
 
 class HunchApp extends StatelessWidget {
