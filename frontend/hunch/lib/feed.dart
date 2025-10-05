@@ -253,12 +253,19 @@ class _CardContentState extends State<CardContent> {
       }
 
       if (_isInitialized && _controller != null) {
-        return FittedBox(
-          fit: BoxFit.cover,
-          child: SizedBox(
-            width: _controller!.value.size.width,
-            height: _controller!.value.size.height,
-            child: VideoPlayer(_controller!),
+        return ClipRRect(
+          borderRadius:
+              BorderRadius.circular(0), // adjust if your card has rounding
+          child: SizedBox.expand(
+            child: FittedBox(
+              fit: BoxFit.cover, // makes it behave like the image
+              clipBehavior: Clip.hardEdge,
+              child: SizedBox(
+                width: _controller!.value.size.width,
+                height: _controller!.value.size.height,
+                child: VideoPlayer(_controller!),
+              ),
+            ),
           ),
         );
       }
