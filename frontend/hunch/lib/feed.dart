@@ -137,13 +137,7 @@ class CardContent extends StatelessWidget {
                     fit: BoxFit.cover,
                     width: double.infinity,
                   )
-                : (data['picture_data'] != null)
-                    ? Image.memory(
-                        data['picture_data'],
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                      )
-                    : Container(color: const Color(0xFFE5E5E5)),
+                : Container(color: const Color(0xFFE5E5E5)),
           ),
         ),
         // Question

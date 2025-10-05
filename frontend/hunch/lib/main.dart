@@ -26,8 +26,6 @@ Future<void> main() async {
     anonKey: 'sb_publishable_JiGhx5v95JaN977zMHHlRA_A2nn7wnT',
   );
 
-  // TODO:: these need to be moved to after sign in
-
   // final testMarket = Market(
   //   id: "111",
   //   question: "HI?!",
