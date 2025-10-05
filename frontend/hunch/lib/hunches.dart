@@ -1,9 +1,15 @@
 // hunches.dart
 import 'package:flutter/material.dart';
+import 'getaggstats.dart';
 
-class HunchesScreen extends StatelessWidget {
+class HunchesScreen extends StatefulWidget {
   const HunchesScreen({super.key});
 
+  @override
+  State<HunchesScreen> createState() => _HunchesScreenState();
+}
+
+class _HunchesScreenState extends State<HunchesScreen> {
   // Mock data - replace with actual state management
   final List<ActiveHunch> _activeHunches = const [
     ActiveHunch(
@@ -28,6 +34,22 @@ class HunchesScreen extends StatelessWidget {
       imageUrl: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80',
     ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _runGetStatsOnce();
+  }
+
+  Future<void> _runGetStatsOnce() async {
+    try {
+      final stats = await getStats();
+      print('getStats() returned: ' + stats.toString());
+    } catch (e, st) {
+      print('getStats() failed: ' + e.toString());
+      print(st.toString());
+    }
+  }
 
   double _calculateAverageGap() {
     if (_activeHunches.isEmpty) return 0;

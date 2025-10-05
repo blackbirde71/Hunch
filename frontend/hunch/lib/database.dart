@@ -165,3 +165,22 @@ Future<void> sendAnswers(List<Answer> answers) async {
   await supabase.from('user_interactions').insert(data);
   print("send data");
 }
+
+Future<List<Map<String, dynamic>>> getStatsDB(List<String> ids) async {
+  if (ids.isEmpty) return [];
+
+  final user = supabase.auth.currentUser;
+  if (user == null) return [];
+
+  // Convert string IDs to integers
+  final intIds = ids.map((id) => int.parse(id)).toList();
+
+  // get polymarket and hackharvard yes, no count for a list of question IDs
+  final stats = await supabase
+    .from('questions')
+    .select('''
+    yes_price,
+    yes_count,
+    no_count''').inFilter('id', intIds);
+  return stats;
+}
