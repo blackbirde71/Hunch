@@ -254,7 +254,7 @@ func grabMarkets(client *genai.Client) ([]Market, error) {
 	params := url.Values{}
 	params.Add("closed", "false")
 	params.Add("volume_num_min", "50000")
-	params.Add("limit", "2000")
+	params.Add("limit", "3000")
 	u.RawQuery = params.Encode()
 	req, _ := http.NewRequest("GET", u.String(), nil)
 
