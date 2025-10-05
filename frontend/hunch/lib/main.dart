@@ -70,8 +70,9 @@ class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
   Future<void> _initializeUserData() async {
-    print("super cool");
+    loadingCache.value = true;
     infoCache = await getUnansweredQuestions(cacheSize, []);
+    loadingCache.value = false;
   }
 
   @override
@@ -186,6 +187,23 @@ class _MainScreenState extends State<MainScreen>
         shape: const Border(
           bottom: BorderSide(color: Colors.black, width: 3),
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(
+                right:
+                    12.0), // 👈 slight left padding, keep some right spacing too
+            child: IconButton(
+              icon: const Icon(Icons.logout, color: Colors.black),
+              tooltip: 'Logout',
+              onPressed: () async {
+                await Supabase.instance.client.auth.signOut();
+                if (context.mounted) {
+                  Navigator.of(context).pushReplacementNamed('/auth');
+                }
+              },
+            ),
+          ),
+        ],
       ),
       body: _selectedIndex == 0 ? const FeedScreen() : const HunchesScreen(),
       bottomNavigationBar: Container(

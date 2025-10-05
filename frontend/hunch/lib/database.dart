@@ -3,6 +3,7 @@
 // batch get stuff from id
 
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -100,7 +101,19 @@ Future<List<Map<String, dynamic>>> getUnansweredQuestions(
   };
 
   final unansweredIds =
-      allIds.where((id) => !answeredIds.contains(id)).take(limit).toList();
+      allIds.where((id) => !answeredIds.contains(id)).toList();
+
+  final random = Random();
+  final selectedIds = <int>[];
+  final usedIndices = <int>{};
+
+  final take = min(limit, unansweredIds.length);
+  while (selectedIds.length < take) {
+    final index = random.nextInt(unansweredIds.length);
+    if (usedIndices.add(index)) {
+      selectedIds.add(unansweredIds[index]);
+    }
+  }
 
   return await getQuestionsByIds(unansweredIds);
 }
@@ -111,7 +124,7 @@ Future<List<Map<String, dynamic>>> getUnansweredQuestions2(
   if (limit == 0) return [];
 
   final user = Supabase.instance.client.auth.currentUser;
-  
+
   if (user == null) {
     // If not signed in, just return random questions
     final questions = await supabase.from('questions').select().limit(limit);
@@ -127,7 +140,6 @@ Future<List<Map<String, dynamic>>> getUnansweredQuestions2(
     ...answered.map<int>((r) => r['question_id'] as int),
     ...cache
   ];
-  
 
   print("start q");
 
@@ -151,4 +163,24 @@ Future<void> sendAnswers(List<Answer> answers) async {
   final data = answers.map((answer) => answer.toJson(user.id)).toList();
 
   await supabase.from('user_interactions').insert(data);
+  print("send data");
+}
+
+Future<List<Map<String, dynamic>>> getStatsDB(List<String> ids) async {
+  if (ids.isEmpty) return [];
+
+  final user = supabase.auth.currentUser;
+  if (user == null) return [];
+
+  // Convert string IDs to integers
+  final intIds = ids.map((id) => int.parse(id)).toList();
+
+  // get polymarket and hackharvard yes, no count for a list of question IDs
+  final stats = await supabase
+    .from('questions')
+    .select('''
+    yes_price,
+    yes_count,
+    no_count''').inFilter('id', intIds);
+  return stats;
 }

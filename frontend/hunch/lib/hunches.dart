@@ -1,39 +1,69 @@
 import 'package:flutter/material.dart';
+import 'package:hunch/globals.dart';
+import 'package:hunch/market.dart';
+import 'getaggstats.dart';
 
-void main() {
-  runApp(const MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: Scaffold(body: SafeArea(child: HunchesScreen())),
-  ));
-}
-
-class HunchesScreen extends StatelessWidget {
+class HunchesScreen extends StatefulWidget {
   const HunchesScreen({super.key});
 
-  final List<ActiveHunch> _activeHunches = const [
-    ActiveHunch(
-      question: 'Trump wins Pennsylvania',
-      marketConsensus: 99,
-      hackathonConsensus: 45,
-      userBet: SwipeAction.yes,
-    ),
-    ActiveHunch(
-      question: 'Bitcoin closes above \$70k this week',
-      marketConsensus: 3,
-      hackathonConsensus: 95,
-      userBet: SwipeAction.no,
-    ),
-    ActiveHunch(
-      question: 'OpenAI announces GPT-5 before December',
-      marketConsensus: 28,
-      hackathonConsensus: 35,
-      userBet: SwipeAction.yes,
-    ),
-  ];
+  @override
+  State<HunchesScreen> createState() => _HunchesScreenState();
+}
+
+
+class _HunchesScreenState extends State<HunchesScreen> {
+  late List<ActiveHunch> _activeHunches;
+  bool _isLoading = true;
+
+  Future<List<Stats>> _runGetStatsOnce() async {
+    final List<Stats> stats = await getStats();
+    return stats;
+    // try {
+      
+    //   // print('getStats() returned: ' + stats.toString());
+    // } catch (e, st) {
+    //   // print('getStats() failed: ' + e.toString());
+    //   // print(st.toString());
+    // }
+  }
+
+  Future<void> _createActiveHunchList() async {
+    List<Stats> stats = await _runGetStatsOnce();
+    List<ActiveHunch> list = [];
+    for (final s in stats) {
+      // print('dbug');
+      // print(s.questionId);
+      // print(marketsBox.keys);
+      Market m = marketsBox.get(s.questionId.toString());
+      ActiveHunch ah = ActiveHunch(
+        question: m.question,
+        marketConsensus: (s.polymarketProb * 100.0).floor(),
+        hackathonConsensus: (s.hackHarvardProb! * 100.0).floor(),
+        userBet: m.action
+      );
+      list.add(ah);
+    }
+    print("list");
+    print(list);
+    setState(() {
+      _activeHunches = list;
+      _isLoading = false;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _createActiveHunchList();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final total = _activeHunches.length;
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    } else {
+      final total = _activeHunches.length;
     final avgPolymarketDiff = _activeHunches
             .map((h) => (100 -
                 (h.marketConsensus -
@@ -48,8 +78,10 @@ class HunchesScreen extends StatelessWidget {
                     .abs()))
             .reduce((a, b) => a + b) /
         total;
-
-    return ListView(
+    return 
+    
+    
+    ListView(
       padding: const EdgeInsets.all(20),
       children: [
         // 🔲 Unified Header Summary
@@ -94,8 +126,12 @@ class HunchesScreen extends StatelessWidget {
           ),
       ],
     );
+    
+    
+    }
   }
 }
+
 
 class _SummaryCell extends StatelessWidget {
   final String title;
@@ -279,8 +315,8 @@ class HunchCard extends StatelessWidget {
 }
 
 class ConsensusBar extends StatelessWidget {
-  final double market;
-  final double hackathon;
+  final int market;
+  final int hackathon;
   const ConsensusBar({
     super.key,
     required this.market,
@@ -322,7 +358,7 @@ class ConsensusBar extends StatelessWidget {
 
             // HackHarvard tick
             Positioned(
-              left: px(hackathon),
+              left: px(hackathon.toDouble()),
               top: labelSpacing + 14 + border,
               height: barHeight - border * 2,
               child: Container(width: tickWidth, color: crimson),
@@ -330,7 +366,7 @@ class ConsensusBar extends StatelessWidget {
 
             // HackHarvard percentage (below bar)
             Positioned(
-              left: (px(hackathon) - 10)
+              left: (px(hackathon.toDouble()) - 10)
                   .clamp(border, c.maxWidth - border - 26),
               bottom: 0,
               child: Text(
@@ -346,7 +382,7 @@ class ConsensusBar extends StatelessWidget {
 
             // Polymarket percentage (above bar, aligned with tick center)
             Positioned(
-              left: (px(market) - 10)
+              left: (px(market.toDouble()) - 10)
                   .clamp(border, c.maxWidth - border - 26),
               top: labelSpacing - 6, // adjust to vertically center with tick
               child: Text(
@@ -362,7 +398,7 @@ class ConsensusBar extends StatelessWidget {
 
             // Polymarket tick
             Positioned(
-              left: px(market),
+              left: px(market.toDouble()),
               top: labelSpacing + 14 + border,
               height: barHeight - border * 2,
               child: Container(width: tickWidth, color: blue),
@@ -377,8 +413,8 @@ class ConsensusBar extends StatelessWidget {
 /// ---------- DATA ----------
 class ActiveHunch {
   final String question;
-  final double marketConsensus;
-  final double hackathonConsensus;
+  final int marketConsensus;
+  final int hackathonConsensus;
   final SwipeAction userBet;
   const ActiveHunch({
     required this.question,
@@ -387,6 +423,4 @@ class ActiveHunch {
     required this.userBet,
   });
 }
-
-enum SwipeAction { yes, no, blank }
 
