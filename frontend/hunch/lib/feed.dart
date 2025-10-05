@@ -34,6 +34,17 @@ class CardStack extends StatefulWidget {
 
 class _CardStackState extends State<CardStack> {
   bool _allComplete = false;
+  final _prefetchCount = 4;
+
+  void _prefetchNextImages() {
+    final end = math.min(_prefetchCount, infoCache.length);
+    for (int i = 0; i < end; i++) {
+      final imageUrl = infoCache[i]['image_url'];
+      if (imageUrl != null && (imageUrl as String).isNotEmpty) {
+        precacheImage(NetworkImage(imageUrl), context);
+      }
+    }
+  }
 
   void _onCardSwiped() {
     setState(() {
@@ -41,6 +52,7 @@ class _CardStackState extends State<CardStack> {
         _allComplete = true;
       }
     });
+    _prefetchNextImages();
   }
 
   @override
@@ -137,13 +149,7 @@ class CardContent extends StatelessWidget {
                     fit: BoxFit.cover,
                     width: double.infinity,
                   )
-                : (data['picture_data'] != null)
-                    ? Image.memory(
-                        data['picture_data'],
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                      )
-                    : Container(color: const Color(0xFFE5E5E5)),
+                : Container(color: const Color(0xFFE5E5E5)),
           ),
         ),
         // Question
