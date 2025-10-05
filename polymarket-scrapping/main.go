@@ -254,7 +254,7 @@ func grabMarkets(client *genai.Client) ([]Market, error) {
 	params := url.Values{}
 	params.Add("closed", "false")
 	params.Add("volume_num_min", "50000")
-	params.Add("limit", "2000")
+	params.Add("limit", "3000")
 	u.RawQuery = params.Encode()
 	req, _ := http.NewRequest("GET", u.String(), nil)
 
@@ -366,31 +366,37 @@ func grabMarkets(client *genai.Client) ([]Market, error) {
 }
 
 func main() {
+
+	/*
+		_ = godotenv.Load()
+		apiKey := os.Getenv("GEMINI_API_KEY")
+		if apiKey == "" {
+			fmt.Println("GEMINI_API_KEY not set. Create a .env with GEMINI_API_KEY or export it.")
+			return
+		}
+		client, err := genai.NewClient(context.Background(), &genai.ClientConfig{
+			APIKey:  apiKey,
+			Backend: genai.BackendGeminiAPI,
+		})
+		if err != nil {
+			fmt.Println(err)
+		}
+		supabaseClient, err = supabase.NewClient(os.Getenv("SUPABASE_URL"), os.Getenv("SUPABASE_API_KEY"), &supabase.ClientOptions{})
+		if err != nil {
+			fmt.Println(err)
+		}
+		// load image gen prompt
+		loadBaseImagePrompt()
+
+		markets, err := grabMarkets(client)
+		if err != nil {
+			fmt.Println(err)
+		}
+	*/
 	_ = godotenv.Load()
-	apiKey := os.Getenv("GEMINI_API_KEY")
-	if apiKey == "" {
-		fmt.Println("GEMINI_API_KEY not set. Create a .env with GEMINI_API_KEY or export it.")
-		return
-	}
-	client, err := genai.NewClient(context.Background(), &genai.ClientConfig{
-		APIKey:  apiKey,
-		Backend: genai.BackendGeminiAPI,
-	})
+	supabaseClient, err := supabase.NewClient(os.Getenv("SUPABASE_URL"), os.Getenv("SUPABASE_API_KEY"), &supabase.ClientOptions{})
 	if err != nil {
 		fmt.Println(err)
 	}
-	supabaseClient, err = supabase.NewClient(os.Getenv("SUPABASE_URL"), os.Getenv("SUPABASE_API_KEY"), &supabase.ClientOptions{})
-	if err != nil {
-		fmt.Println(err)
-	}
-	// load image gen prompt
-	loadBaseImagePrompt()
-
-	markets, err := grabMarkets(client)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	fmt.Println(len(markets))
-
+	findVideos(supabaseClient)
 }
